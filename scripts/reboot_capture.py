@@ -20,7 +20,11 @@ reboot_capture.py — 嵌入式设备循环重启 + 串口日志采集
     - 不要在 terminal(background=true) 脚本中用 fuser -k
     - 日志保存到 /tmp/reboot_logs/iter_XXX.log
 """
-import serial, time, subprocess, os, sys, re
+try:
+    import serial  # pyserial
+except ImportError:
+    import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
+import time, subprocess, os, sys, re
 
 PORT = "/dev/ttyUSB0"
 BAUD = int(sys.argv[3]) if len(sys.argv) > 3 else 115200

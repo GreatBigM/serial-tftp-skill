@@ -22,7 +22,11 @@ Usage:
     python3 auto-uboot-interrupt.py config reset             # 清除全部缓存
 """
 
-import serial, time, sys, argparse, os, subprocess
+try:
+    import serial  # pyserial
+except ImportError:
+    import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
+import time, sys, argparse, os, subprocess
 from flash_config import (
     resolve_baud, handle_config_subcommand, preflight, wizard,
     get, set, load_config, CONFIG_FILE

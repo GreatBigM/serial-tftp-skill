@@ -24,7 +24,11 @@
 注: 脚本中的进程名（如 c_mi_ipc / miio_client / apphilogcat 等）
 和日志路径为示例，请按目标设备实际进程名修改。
 """
-import serial, time, re, subprocess, sys, os, argparse
+try:
+    import serial  # pyserial
+except ImportError:
+    import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
+import time, re, subprocess, sys, os, argparse
 
 PORT = "/dev/ttyUSB0"
 BAUD = 115200

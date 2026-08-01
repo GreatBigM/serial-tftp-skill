@@ -81,7 +81,10 @@ def reset(key=None):
 
 def detect_baud(port="/dev/ttyUSB0"):
     """自动探测波特率：逐一尝试候选值，发 CR 看响应可打印字符占比 > 70%。"""
-    import serial
+    try:
+        import serial  # pyserial
+    except ImportError:
+        import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
 
     for baud in BAUD_CANDIDATES:
         try:

@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式设备串口交互与 TFTP 刷机 — 环境预检、串口连接、模式判断、配网烧录、完成验证
-version: 1.1.0
+version: 1.2.0
 category: devops
 metadata:
   hermes:
@@ -27,6 +27,7 @@ AI:  执行 serial-tftp（统一命令入口，含版本门卫）→ 回报结�
 > - **统一入口：优先用 `serial-tftp` 命令**（脚本目录的 wrapper，含 py3 版本门卫 + 子命令分派），不要直接调 python 脚本
 > - 参数写入方式：`serial-tftp config <key> <value>`（写缓存）或 `--ipaddr/--serverip/--tftp-dir`（单次）
 > - 版本要求：Python 3.6+（2020 后系统自带）。py2-only 环境 wrapper 会友好提示，不会 SyntaxError 崩溃
+> - 依赖自适配：pyserial 有则用，无则自动 fallback 到内置 serial_compat.py（标准库 termios，零安装）——不要要求用户装 pyserial
 > - 脚本 stdin 非 TTY 时会自动跳过交互向导、提示参数缺失——这是让 AI 走参数路径，不是 bug
 > - 不要用管道喂 stdin 给向导（`printf '...' | script` 这类），向导只服务真实终端
 > - 预检失败分两类：参数缺失（AI 问齐再补） vs 环境问题（TFTP 服务/目录/固件——提示用户修复）

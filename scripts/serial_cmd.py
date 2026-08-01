@@ -11,7 +11,11 @@ Config subcommand:
   python3 serial_cmd.py config port /dev/ttyUSB1 # set port
   python3 serial_cmd.py config baud reset        # clear cache
 """
-import serial
+try:
+    import serial  # pyserial
+except ImportError:
+    import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
+
 import time
 import sys
 import subprocess

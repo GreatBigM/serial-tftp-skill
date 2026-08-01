@@ -49,8 +49,8 @@ python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py flash
 
 ## 依赖
 
-- **Python 3.6+**（必需，2020 年后 Linux 发行版自带；Python 2 不支持，脚本有版本检测）
-- pyserial（串口库，`pip3 install pyserial` 或 `sudo apt-get install python3-serial`）
+- **Python 3.6+**（必需，2020 年后 Linux 发行版自带；Python 2 不支持，serial-tftp 命令有版本门卫）
+- pyserial（可选：有则用，无则自动 fallback 到内置标准库兼容层 serial_compat.py，零安装）
 - tftpd-hpa（TFTP 服务器）
 - 串口线连接 /dev/ttyUSB0
 

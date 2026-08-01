@@ -20,7 +20,11 @@
   - login retry 循环（~10 次）
   - 全部 try/except 包裹
 """
-import serial, time, sys, os, subprocess
+try:
+    import serial  # pyserial
+except ImportError:
+    import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
+import time, sys, os, subprocess
 from datetime import datetime
 
 # ── 默认参数 ──

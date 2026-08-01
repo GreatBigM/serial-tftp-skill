@@ -2,6 +2,16 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 1.2.0 (2026-08-01)
+
+### Added
+- **serial_compat.py：pyserial 兼容层（标准库 termios 实现，零依赖）**——环境无 pyserial 时自动 fallback，无需 pip install
+- 6 个脚本 import 统一改为 try/except fallback（有 pyserial 用 pyserial，无则用标准库）
+- 解决协作者环境差异：py3 必有 + pyserial 可能缺失的场景全覆盖
+
+### Changed
+- 版本 1.1.0 → 1.2.0
+
 ## 1.1.0 (2026-08-01)
 
 ### Added
