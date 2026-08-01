@@ -15,6 +15,7 @@
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -22,6 +23,8 @@ import time
 CONFIG_DIR = os.path.expanduser("~/.config/serial-tftp")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 BAUD_CANDIDATES = [115200, 921600, 1500000, 57600, 9600]
+
+IP_RE = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
 
 # ─── 配置读写 ────────────────────────────────────────────────────────
 
@@ -128,6 +131,108 @@ def resolve_baud(baud_arg, port="/dev/ttyUSB0"):
     print("[-] Baud rate detection failed (device silent?).")
     print("    Specify: --baud 115200  or  config baud 921600")
     sys.exit(1)
+
+
+# ─── 交互式参数设定向导 ────────────────────────────────────────────
+
+
+def _valid_ip(s):
+    """IP 格式校验：4 段 0-255。"""
+    if not IP_RE.match(s):
+        return False
+    return all(0 <= int(p) <= 255 for p in s.split("."))
+
+
+def _ask(prompt, default=None, validator=None, hint=""):
+    """交互输入一行。回车接受默认值；返回 None 表示用户取消（q/quit）。"""
+    while True:
+        suffix = f" [{default}]" if default else ""
+        hint_s = f" ({hint})" if hint else ""
+        try:
+            val = input(f"{prompt}{hint_s}{suffix}: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return None
+        if val.lower() in ("q", "quit", "exit"):
+            return None
+        if not val and default:
+            return default
+        if not val:
+            print("  ⚠ 必填项，直接回车取消 (q)")
+            continue
+        if validator and not validator(val):
+            print(f"  ⚠ 无效输入: {val}")
+            continue
+        return val
+
+
+def wizard():
+    """交互式参数设定向导：逐项输入并校验，回车接受默认值。
+
+    全部输入完成后一次性写盘——中途取消（q/EOF）不产生任何副作用。
+    """
+    cfg = load_config()
+    print()
+    print("┌─ serial-tftp 参数设定 ─────────────────────┐")
+    print("│ 直接回车接受 [] 内默认值，输入 q 取消       │")
+    print("└─────────────────────────────────────────────┘")
+
+    # 先收集全部输入（不写盘）
+    ipaddr = _ask(
+        "设备 IP", default=cfg.get("ipaddr", ""),
+        validator=_valid_ip, hint="如 192.168.1.10")
+    if ipaddr is None:
+        print("[-] 已取消，配置未修改")
+        return False
+
+    serverip = _ask(
+        "TFTP 服务器 IP", default=cfg.get("serverip", ""),
+        validator=_valid_ip, hint="开发机 IP，如 192.168.1.1")
+    if serverip is None:
+        print("[-] 已取消，配置未修改")
+        return False
+
+    tftp_dir = _ask(
+        "TFTP 固件目录", default=cfg.get("tftp_dir", ""),
+        validator=lambda p: os.path.isdir(os.path.expanduser(p)),
+        hint="含 auto_update_tftp.txt + *_NOR_ALL.bin")
+    if tftp_dir is None:
+        print("[-] 已取消，配置未修改")
+        return False
+
+    baud = _ask(
+        "波特率", default=str(cfg.get("baud", "") or "auto"),
+        validator=lambda v: v.lower() in ("auto", "detect") or v.isdigit(),
+        hint="auto=缓存/探测")
+    if baud is None:
+        print("[-] 已取消，配置未修改")
+        return False
+
+    port = _ask(
+        "串口", default=cfg.get("port", "/dev/ttyUSB0"),
+        validator=lambda p: os.path.exists(p),
+        hint="回车用默认，或输入实际端口")
+    if port is None:
+        print("[-] 已取消，配置未修改")
+        return False
+
+    # 全部通过 → 统一写盘
+    set("ipaddr", ipaddr)
+    set("serverip", serverip)
+    set("tftp_dir", os.path.abspath(os.path.expanduser(tftp_dir)))
+    if baud.lower() in ("auto", "detect"):
+        set("baud", None)  # 回退到自动探测
+    else:
+        set("baud", int(baud))
+    set("port", port)
+
+    print()
+    print("[+] 配置已保存:")
+    for k in CONFIG_KEYS:
+        v = get(k)
+        print(f"    {k:12s} = {v if v is not None else '(auto)'}")
+    print("    随时用 `config show` 查看，或重跑 `setup` 修改")
+    return True
 
 
 # ─── 环境预检 ────────────────────────────────────────────────────────
@@ -245,6 +350,11 @@ def handle_config_subcommand(args):
         for k in CONFIG_KEYS:
             v = cfg.get(k, "(not set)")
             print(f"  {k:12s} = {v}")
+        return True
+
+    # config setup — 交互式向导
+    if len(args) == 2 and args[1] in ("setup", "wizard"):
+        wizard()
         return True
 
     # config reset (全部)

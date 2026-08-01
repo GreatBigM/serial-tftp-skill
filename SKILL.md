@@ -10,7 +10,10 @@ metadata:
 ## ⚡ 快速开始
 
 ```bash
-# 首次使用：设定参数（自动缓存，后续免输入）
+# 方式 A（推荐，交互式向导）：逐项输入，回车接受默认值，q 取消
+python3 <skill_dir>/scripts/auto-uboot-interrupt.py setup
+
+# 方式 B（命令行直设）：适合脚本化/已知参数
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config ipaddr <DEV_IP>
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config serverip <HOST_IP>
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config tftp-dir <TFTP_DIR>
@@ -29,6 +32,13 @@ python3 <skill_dir>/scripts/auto-uboot-interrupt.py config show
 ```
 
 **铁律：用户说"烧录"→ 直接跑脚本，不解释手动步骤。**
+
+> **AI agent 交互约定**：`setup` 向导是终端直连场景（脚本 input() 与用户对话）。
+> agent 调用脚本时 stdin 非 TTY → 脚本自动跳过向导、提示参数缺失。
+> agent 应读本文件参数说明，在对话层向用户询问参数，然后以
+> `--ipaddr/--serverip/--tftp-dir` 参数或 `config <key> <value>` 方式传入，
+> 不要用管道喂 stdin 给向导。
+> 预检失败时脚本会提示"是否进入交互式参数设定"，仅在真实终端应答 y。
 
 ---
 

@@ -24,7 +24,7 @@ Usage:
 
 import serial, time, sys, argparse, os, subprocess
 from flash_config import (
-    resolve_baud, handle_config_subcommand, preflight,
+    resolve_baud, handle_config_subcommand, preflight, wizard,
     get, set, load_config, CONFIG_FILE
 )
 
@@ -342,6 +342,11 @@ def shell_mode(ser):
 
 
 def main():
+    # setup / wizard 子命令拦截
+    if len(sys.argv) > 1 and sys.argv[1] in ("setup", "wizard"):
+        wizard()
+        return
+
     # config 子命令拦截
     if handle_config_subcommand(sys.argv[1:]):
         return
@@ -400,8 +405,33 @@ def main():
                                skip_tftp=(args.mode == "shell"))
         if not ok:
             print(f"\n[-] Preflight failed. Fix above issues and retry.")
-            print(f"    Tip: 首次使用请设定: config ipaddr / serverip / tftp-dir")
-            sys.exit(1)
+            # 交互式引导：参数缺失时询问是否进入 setup 向导
+            missing = [e for e in errors if "未设定" in e or "不存在" in e]
+            if missing and not sys.stdin.isatty():
+                print("    Tip: 首次使用请运行: python3 auto-uboot-interrupt.py setup")
+                sys.exit(1)
+            try:
+                ans = input("\n是否进入交互式参数设定? [y/N]: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                ans = "n"
+            if ans in ("y", "yes"):
+                if not wizard():
+                    sys.exit(1)
+                # 重载缓存后重跑预检
+                port = args.port or get("port") or find_serial() or DEFAULT_PORT
+                ipaddr = args.ipaddr or get("ipaddr") or ""
+                serverip = args.serverip or get("serverip") or ""
+                netmask = args.netmask or get("netmask") or "255.255.254.0"
+                gateway = args.gateway or serverip
+                tftp_dir = args.tftp_dir or get("tftp_dir") or ""
+                ok, errors = preflight(port, tftp_dir, ipaddr, serverip,
+                                       skip_tftp=(args.mode == "shell"))
+                if not ok:
+                    print("\n[-] Preflight still failing after setup.")
+                    sys.exit(1)
+            else:
+                print("    Tip: 首次使用请运行: python3 auto-uboot-interrupt.py setup")
+                sys.exit(1)
     else:
         print("[*] Preflight skipped (--no-precheck)")
 

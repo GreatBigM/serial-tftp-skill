@@ -26,7 +26,10 @@ cp -r serial-tftp-skill/references ~/.hermes/skills/serial-tftp/
 ## 首次使用
 
 ```bash
-# 设定参数（自动缓存到 ~/.config/serial-tftp/config.json）
+# 方式 A（推荐）：交互式向导，逐项输入，回车接受默认值
+python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py setup
+
+# 方式 B：命令行直设（适合脚本化/已知参数）
 python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config ipaddr <设备IP>
 python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config serverip <主机IP>
 python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config tftp-dir <TFTP目录>
@@ -34,6 +37,8 @@ python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config tftp
 # 一键烧录
 python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py flash
 ```
+
+参数自动缓存到 ~/.config/serial-tftp/config.json，后续烧录免输入。
 
 ## 依赖
 
