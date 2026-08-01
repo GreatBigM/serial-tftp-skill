@@ -75,6 +75,13 @@ install_one() {
     cp "${TMP}/repo/CHANGELOG.md" "${dest}/" 2>/dev/null || true
     # 清理 __pycache__
     find "${dest}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    # 安装统一命令入口 serial-tftp → ~/.local/bin/（版本门卫 + 子命令分派）
+    if [ -f "${dest}/scripts/serial-tftp" ]; then
+        chmod +x "${dest}/scripts/serial-tftp"
+        mkdir -p "${HOME}/.local/bin"
+        ln -sf "${dest}/scripts/serial-tftp" "${HOME}/.local/bin/serial-tftp"
+        echo "    ✅ 命令入口: ${HOME}/.local/bin/serial-tftp"
+    fi
     echo "    ✅ ${label}: ${SKILL_NAME} 已安装"
 }
 

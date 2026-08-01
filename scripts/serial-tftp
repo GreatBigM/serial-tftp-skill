@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# serial-tftp 统一命令入口（版本门卫 + 子命令分派）
+#
+# 设计目的:
+#   1. 版本门卫: 所有脚本是 Python 3 语法, py2 直接解析会 SyntaxError 崩溃
+#      本 wrapper 在 Python 解析之前检查 python3 是否存在, 给出友好提示
+#   2. 统一入口: 一个命令覆盖全部功能, 不用记 6 个 python 脚本名
+#
+# 用法:
+#   serial-tftp flash                 # 一键烧录（AI/终端直连均可）
+#   serial-tftp flash --at-uboot      # 设备已在 U-Boot
+#   serial-tftp setup                 # 交互式参数设定
+#   serial-tftp config show           # 查看配置
+#   serial-tftp cmd 'ifconfig eth0'   # 串口发命令
+#   serial-tftp capture [baud] [sec]  # 启动日志采集
+#   serial-tftp reboot-capture        # 循环重启采集
+#   serial-tftp stress --count 20     # 重启压力测试
+#   serial-tftp shell                 # 交互式 U-Boot shell
+set -euo pipefail
+
+# 定位脚本目录（支持 symlink）
+SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+SKILL_DIR="$(cd "$(dirname "$SELF")/.." && pwd)"
+SCRIPTS="${SKILL_DIR}/scripts"
+
+# ─── 版本门卫: py2 环境在此拦截，Python 解析之前 ──────────────────
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "错误: 需要 Python 3.6+，但未检测到 python3" >&2
+    echo "请安装: sudo apt-get install -y python3" >&2
+    exit 1
+fi
+PY_VER="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo "0.0")"
+if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,6) else 1)' 2>/dev/null; then
+    :
+else
+    echo "错误: 需要 Python 3.6+，当前是 Python ${PY_VER}" >&2
+    echo "Python 2 已于 2020 年停止维护，请安装 python3" >&2
+    exit 1
+fi
+
+# ─── 子命令分派 ────────────────────────────────────────────────────
+CMD="${1:-flash}"
+
+case "$CMD" in
+    flash|shell|setup|wizard|config|--help|-h|help)
+        exec python3 "${SCRIPTS}/auto-uboot-interrupt.py" "$@"
+        ;;
+    cmd)
+        shift
+        exec python3 "${SCRIPTS}/serial_cmd.py" "$@"
+        ;;
+    capture)
+        shift
+        exec python3 "${SCRIPTS}/capture_boot_log.py" "$@"
+        ;;
+    reboot-capture|reboot_capture)
+        shift
+        exec python3 "${SCRIPTS}/reboot_capture.py" "$@"
+        ;;
+    stress)
+        shift
+        exec python3 "${SCRIPTS}/reboot-stress.py" "$@"
+        ;;
+    *)
+        echo "未知命令: $CMD" >&2
+        echo "可用: flash / shell / setup / config / cmd / capture / reboot-capture / stress" >&2
+        exit 1
+        ;;
+esac

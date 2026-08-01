@@ -2,6 +2,16 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 1.1.0 (2026-08-01)
+
+### Added
+- **统一命令入口 `serial-tftp`**（scripts/serial-tftp wrapper）：版本门卫（py3 检测在 Python 解析前拦截 py2-only 环境，友好提示不崩溃）+ 子命令分派（flash/setup/config/cmd/capture/reboot-capture/stress/shell）
+- install.sh 安装 wrapper 到 ~/.local/bin/serial-tftp
+- py3 版本检测：flash_config.py 顶部 sys.version_info < 3.6 拦截（3.0-3.5 提示）
+
+### Changed
+- README/SKILL.md：使用方式主推 `serial-tftp` 命令入口，依赖明确 Python 3.6+
+
 ## 1.0.0 (2026-08-01)
 
 ### Added

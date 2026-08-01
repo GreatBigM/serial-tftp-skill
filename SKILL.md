@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式设备串口交互与 TFTP 刷机 — 环境预检、串口连接、模式判断、配网烧录、完成验证
-version: 1.0.0
+version: 1.1.0
 category: devops
 metadata:
   hermes:
@@ -17,18 +17,34 @@ metadata:
 AI:  读本文件参数说明 → 识别缺失参数 (ipaddr/serverip/tftp_dir)
 AI:  对话层向用户询问缺失参数
 用户: 设备 10.0.0.5，目录 /mnt/data/xxx
-AI:  config/--xxx 写入缓存 → 直接跑 flash → 回报结果
+AI:  执行 serial-tftp（统一命令入口，含版本门卫）→ 回报结果
 ```
 
-**铁律：用户说"烧录"→ AI 直接跑脚本，不解释手动步骤，不反问"你要不要先配置"。**
+**铁律：用户说"烧录"→ AI 直接跑 `serial-tftp flash`，不解释手动步骤，不反问"你要不要先配置"。**
 参数缺失 → AI 在对话层问，拿齐就干。全程不需要用户手动跑脚本。
 
 > **AI 交互约定（agent 必读）**：
-> - 参数写入方式：`config <key> <value>`（写缓存）或 `--ipaddr/--serverip/--tftp-dir`（单次）
+> - **统一入口：优先用 `serial-tftp` 命令**（脚本目录的 wrapper，含 py3 版本门卫 + 子命令分派），不要直接调 python 脚本
+> - 参数写入方式：`serial-tftp config <key> <value>`（写缓存）或 `--ipaddr/--serverip/--tftp-dir`（单次）
+> - 版本要求：Python 3.6+（2020 后系统自带）。py2-only 环境 wrapper 会友好提示，不会 SyntaxError 崩溃
 > - 脚本 stdin 非 TTY 时会自动跳过交互向导、提示参数缺失——这是让 AI 走参数路径，不是 bug
 > - 不要用管道喂 stdin 给向导（`printf '...' | script` 这类），向导只服务真实终端
 > - 预检失败分两类：参数缺失（AI 问齐再补） vs 环境问题（TFTP 服务/目录/固件——提示用户修复）
 > - 烧录完成回报：新 IP（串口 ifconfig eth0 查）、启动状态、剩余验证项
+
+## serial-tftp 命令一览
+
+```bash
+serial-tftp flash                 # 一键烧录（主命令）
+serial-tftp flash --at-uboot      # 设备已在 U-Boot
+serial-tftp setup                 # 交互式参数设定（终端直连）
+serial-tftp config show           # 查看配置缓存
+serial-tftp cmd 'ifconfig eth0'   # 串口发单条命令
+serial-tftp capture               # 启动日志采集
+serial-tftp reboot-capture        # 循环重启采集
+serial-tftp stress --count 20     # 重启压力测试
+serial-tftp shell                 # 交互式 U-Boot shell
+```
 
 ## 终端直连（无 AI 时的备选）
 

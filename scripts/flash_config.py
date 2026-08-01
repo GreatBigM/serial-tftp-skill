@@ -12,12 +12,21 @@
   config serverip [值|reset]
   config tftp-dir [路径|reset]
   config reset             — 清除全部缓存
+
+依赖: Python 3.6+（2020 年后 Linux 发行版自带；Python 2 不支持）
 """
+import sys
+if sys.version_info < (3, 6):
+    sys.stderr.write(
+        "错误: 本脚本需要 Python 3.6+\n"
+        "检测到 Python %d.%d (Python 2 已于 2020 年停止维护)\n"
+        "请安装 python3: sudo apt-get install -y python3\n" % sys.version_info[:2])
+    sys.exit(1)
+
 import json
 import os
 import re
 import subprocess
-import sys
 import time
 
 CONFIG_DIR = os.path.expanduser("~/.config/serial-tftp")
