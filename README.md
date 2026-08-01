@@ -16,7 +16,7 @@ ingenic-basic-tftp-flash  TFTP 刷机完整流程（TFTP server 搭建/mai_tftp/
 curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash
 
 # 只装单个技能（可选）
-curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash -s serial-setup
+curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash -s -- serial-setup
 ```
 
 > 脚本等价于手动复制（clone + cp），不经过安全扫描，可先审阅脚本内容再执行。

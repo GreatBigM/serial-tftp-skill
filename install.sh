@@ -2,7 +2,7 @@
 # serial-tftp-skill 一键安装脚本（串口 + TFTP 烧录技能集）
 # 用法:
 #   安装全部: curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash
-#   安装单个: curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash -s serial-setup
+#   安装单个: curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash -s -- serial-setup
 # 等价于手动复制，不经过 hermes skills install 的安全扫描
 set -euo pipefail
 
