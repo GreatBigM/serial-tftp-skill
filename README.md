@@ -23,7 +23,11 @@ cp -r serial-tftp-skill/scripts ~/.hermes/skills/serial-tftp/
 cp -r serial-tftp-skill/references ~/.hermes/skills/serial-tftp/
 ```
 
-## 首次使用
+## 使用方式
+
+**本技能的使用方式是：用户指挥 AI，AI 替用户执行。** 用户说"配置烧录参数/烧录/刷机"，AI 读技能参数说明、对话层询问缺失参数、写入缓存并直接执行，用户不面对命令行。
+
+无 AI 时可在终端直连：
 
 ```bash
 # 方式 A（推荐）：交互式向导，逐项输入，回车接受默认值

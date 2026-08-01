@@ -7,13 +7,37 @@ metadata:
     triggers: [tftp, 刷机, 烧录, mai_tftp, tftpboot, auto_update_tftp, 串口, serial, ttyUSB, uboot, 串口登录]
 ---
 
-## ⚡ 快速开始
+## ⚡ 快速开始（AI 替你完成）
+
+**本技能的使用方式是：用户指挥 AI，AI 替用户执行。用户不面对命令行。**
+
+```
+用户: 帮我配置烧录参数 / 烧录 / 刷机
+AI:  读本文件参数说明 → 识别缺失参数 (ipaddr/serverip/tftp_dir)
+AI:  对话层向用户询问缺失参数
+用户: 设备 10.0.0.5，目录 /mnt/data/xxx
+AI:  config/--xxx 写入缓存 → 直接跑 flash → 回报结果
+```
+
+**铁律：用户说"烧录"→ AI 直接跑脚本，不解释手动步骤，不反问"你要不要先配置"。**
+参数缺失 → AI 在对话层问，拿齐就干。全程不需要用户手动跑脚本。
+
+> **AI 交互约定（agent 必读）**：
+> - 参数写入方式：`config <key> <value>`（写缓存）或 `--ipaddr/--serverip/--tftp-dir`（单次）
+> - 脚本 stdin 非 TTY 时会自动跳过交互向导、提示参数缺失——这是让 AI 走参数路径，不是 bug
+> - 不要用管道喂 stdin 给向导（`printf '...' | script` 这类），向导只服务真实终端
+> - 预检失败分两类：参数缺失（AI 问齐再补） vs 环境问题（TFTP 服务/目录/固件——提示用户修复）
+> - 烧录完成回报：新 IP（串口 ifconfig eth0 查）、启动状态、剩余验证项
+
+## 终端直连（无 AI 时的备选）
+
+用户自己跑脚本的场景（脚本化 / 无 agent 环境）：
 
 ```bash
-# 方式 A（推荐，交互式向导）：逐项输入，回车接受默认值，q 取消
+# 方式 A（交互式向导）：逐项输入，回车接受默认值，q 取消
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py setup
 
-# 方式 B（命令行直设）：适合脚本化/已知参数
+# 方式 B（命令行直设）：适合已知参数
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config ipaddr <DEV_IP>
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config serverip <HOST_IP>
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config tftp-dir <TFTP_DIR>
@@ -30,15 +54,6 @@ python3 <skill_dir>/scripts/serial_cmd.py 'ifconfig eth0'
 # 查看/管理配置
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config show
 ```
-
-**铁律：用户说"烧录"→ 直接跑脚本，不解释手动步骤。**
-
-> **AI agent 交互约定**：`setup` 向导是终端直连场景（脚本 input() 与用户对话）。
-> agent 调用脚本时 stdin 非 TTY → 脚本自动跳过向导、提示参数缺失。
-> agent 应读本文件参数说明，在对话层向用户询问参数，然后以
-> `--ipaddr/--serverip/--tftp-dir` 参数或 `config <key> <value>` 方式传入，
-> 不要用管道喂 stdin 给向导。
-> 预检失败时脚本会提示"是否进入交互式参数设定"，仅在真实终端应答 y。
 
 ---
 
