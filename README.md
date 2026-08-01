@@ -10,18 +10,21 @@
 
 ## 安装
 
+本 skill 支持多 agent 目标：Hermes / Claude Code / Codex。安装脚本自动探测本机已安装的 agent，让用户选择安装目标。
+
 ```bash
-curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | bash
+# 方式 1：交互选择安装目标（推荐，先下载再执行以保留交互）
+curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh
+
+# 方式 2：指定目标（非交互）
+curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | bash -s -- --target hermes,claude
+
+# 方式 3：安装到全部检测到的 agent
+curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | bash -s -- --all
 ```
 
-或手动：
-```bash
-git clone https://gitee.com/GreatBigM/serial-tftp-skill.git
-mkdir -p ~/.hermes/skills/serial-tftp
-cp serial-tftp-skill/SKILL.md ~/.hermes/skills/serial-tftp/
-cp -r serial-tftp-skill/scripts ~/.hermes/skills/serial-tftp/
-cp -r serial-tftp-skill/references ~/.hermes/skills/serial-tftp/
-```
+> 脚本等价于手动复制（clone + cp），不经过安全扫描，可先审阅脚本内容再执行。
+> 已安装时自动备份旧版本到 `<skill_dir>.bak.<时间戳>`，重跑即升级（含版本对比提示）。
 
 ## 使用方式
 
