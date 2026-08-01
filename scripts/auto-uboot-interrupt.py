@@ -26,7 +26,7 @@ try:
     import serial  # pyserial
 except ImportError:
     import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
-import time, sys, argparse, os, subprocess
+import time, sys, argparse, os, subprocess, re
 from flash_config import (
     resolve_baud, handle_config_subcommand, preflight, wizard,
     get, set, load_config, CONFIG_FILE
@@ -184,27 +184,40 @@ def interrupt_uboot(ser, timeout=20):
     """reboot + 砸回车打断 autoboot，边砸边读即时检测 U-Boot 提示符。"""
     print("[*] Sending reboot + interrupting U-Boot...")
     ser.write(b"reboot\r")
-    MARKERS = ["<项目>#", "=>"]
+    # 提示符探测化：不硬编码 <项目>#，匹配两类 U-Boot 提示符形态
+    #   1. "<名字>#"（PRJ009# / U-Boot# / 任意名#）
+    #   2. "=>"（通用 U-Boot 提示符）
+    PROMPT_RE = re.compile(r"(#\s*$|=>\s*$)", re.MULTILINE)
     end = time.time() + timeout
     buf = ""
+    quiet_since = None
     while time.time() < end:
-        ser.write(b"\r\n")
-        time.sleep(0.05)
+        # 先读，再根据是否静默决定发不发回车
         if ser.in_waiting:
             buf += ser.read(ser.in_waiting).decode(errors="replace")
-        low = buf.lower()
-        if any(m in low for m in MARKERS):
+            quiet_since = None  # 有输出，非静默
+        else:
+            if quiet_since is None:
+                quiet_since = time.time()
+            elif time.time() - quiet_since >= 0.3:
+                # 静默 ≥0.3s：可能已到 U-Boot，砸回车试
+                ser.write(b"\r\n")
+                time.sleep(0.05)
+                quiet_since = None  # 重置，避免连续轰炸
+        if PROMPT_RE.search(buf):
             time.sleep(0.4)
             ser.write(b"\r")
             time.sleep(0.4)
             confirm = drain(ser).decode(errors="replace")
-            if any(m in confirm.lower() for m in MARKERS):
+            if PROMPT_RE.search(confirm):
                 print("[+] U-Boot interrupted successfully!")
                 return True
+            # 确认失败：可能是误匹配（如日志行尾 #），继续
+            buf += confirm
     # 兜底
     time.sleep(0.5)
     buf += drain(ser).decode(errors="replace")
-    if any(m in buf.lower() for m in MARKERS):
+    if PROMPT_RE.search(buf):
         print("[+] U-Boot interrupted! (late drain)")
         return True
 
