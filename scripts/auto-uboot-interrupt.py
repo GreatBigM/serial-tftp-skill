@@ -243,6 +243,30 @@ def set_network(ser, ipaddr, netmask, gateway, serverip):
     return True
 
 
+def check_ip_conflict(ser, ipaddr, retries=1):
+    """IP 冲突预检：ping 设备自身 IP，通 = 被其他设备占用。
+
+    U-Boot 的 ping 发 ARP 广播，若自身 IP 已被局域网设备占用，
+    会收到 ARP 回应 → 提示冲突。ping 失败 = 无占用 = 可用。
+    返回 True=空闲可用，False=冲突。
+    """
+    print(f"[*] Checking IP conflict: ping {ipaddr} ...")
+    for i in range(retries + 1):
+        ser.write(f"ping {ipaddr}\\r".encode())
+        time.sleep(3)
+        out = drain(ser).decode(errors="replace").lower()
+        if "alive" in out or "bytes" in out or "received" in out:
+            print(f"[-] IP CONFLICT: {ipaddr} is already used by another device!")
+            print("    U-Boot 能 ping 通自身 IP = 该 IP 已被局域网设备占用")
+            print("    排查: 宿主机 `ip neigh show | grep <IP>` 看占用者")
+            print("    换 IP 后重试: serial-tftp config ipaddr <新IP>")
+            return False
+        if i < retries:
+            time.sleep(2)
+    print(f"[+] IP {ipaddr} is free (no ARP reply)")
+    return True
+
+
 def ping_verify(ser, serverip, retries=2):
     """U-Boot ping 验证网络连通性（可选）。"""
     # 提取纯 IP（去掉可能的后缀）
@@ -494,6 +518,12 @@ def main():
     if not set_network(ser, ipaddr, netmask, gateway, serverip):
         print("[-] Network config failed")
         print("    恢复: 确认设备在 U-Boot（串口看提示符）")
+        ser.close()
+        sys.exit(1)
+
+    # IP 冲突预检：ping 设备自身 IP，通 = 被占用 → 中止（烧了也白烧）
+    if not check_ip_conflict(ser, ipaddr):
+        print("[-] Abort: IP conflict detected. Fix IP and retry.")
         ser.close()
         sys.exit(1)
 
