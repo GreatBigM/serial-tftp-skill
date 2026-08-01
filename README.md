@@ -11,12 +11,12 @@
 ## 安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash
+curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | bash
 ```
 
 或手动：
 ```bash
-git clone https://github.com/GreatBigM/serial-tftp-skill.git
+git clone https://gitee.com/GreatBigM/serial-tftp-skill.git
 mkdir -p ~/.hermes/skills/serial-tftp
 cp serial-tftp-skill/SKILL.md ~/.hermes/skills/serial-tftp/
 cp -r serial-tftp-skill/scripts ~/.hermes/skills/serial-tftp/
