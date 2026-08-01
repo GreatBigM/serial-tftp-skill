@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-<项目>/<项目> 重启压力测试 — N 次循环，采集 I2C/进程/崩溃数据
+设备重启压力测试 — N 次循环，采集 I2C/进程/崩溃数据
 
 用法:
     python3 scripts/reboot-stress.py           # 默认 20 次
@@ -17,9 +17,12 @@
   I2C_TO    - dmesg | grep -c "i2c.*timeout" (I2C 超时计数)
   SEG       - dmesg | grep -c "Segmentation fault" (段错误)
   I2C_OK    - dmesg | grep -c "i2c.*register ok"  (I2C 初始化状态)
-  PS        - ps | grep -c c_mi_ipc  (主应用存活)
-  MJAC      - grep -c mjac /tmp/miio_client.log (安全芯片状态)
+  PS        - ps | grep -c <主应用进程>  (主应用存活)
+  MJAC      - grep -c mjac /tmp/<日志文件> (安全芯片状态)
   UPTIME    - cat /proc/uptime (启动时间)
+
+注: 脚本中的进程名（如 c_mi_ipc / miio_client / apphilogcat 等）
+和日志路径为示例，请按目标设备实际进程名修改。
 """
 import serial, time, re, subprocess, sys, os, argparse
 
@@ -211,7 +214,7 @@ def analyze(results_data):
 
 def main():
     global DEFAULT_COUNT
-    parser = argparse.ArgumentParser(description="<项目>/<项目> 重启压力测试")
+    parser = argparse.ArgumentParser(description="设备重启压力测试")
     parser.add_argument("--count", type=int, default=20, help="重启次数 (默认20)")
     parser.add_argument("--port", default="/dev/ttyUSB0", help="串口 (默认 /dev/ttyUSB0)")
     parser.add_argument("--baud", type=int, default=115200)
@@ -221,7 +224,7 @@ def main():
     global BAUD; BAUD = args.baud
 
     n = DEFAULT_COUNT
-    print(f"=== <项目> I2C 压力测试 ({n}次) ===")
+    print(f"=== 设备 I2C 压力测试 ({n}次) ===")
     print(f"串口: {args.port} @ {args.baud}")
     print(f"开始: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"预计: ~{n * 60 // 60}min")
@@ -282,7 +285,7 @@ def main():
             errors.append(f"Iter {i}: {e}")
             print(f"[{i:3d}/{n}] ❌ {e}"); sys.stdout.flush()
             time.sleep(REBOOT_WAIT); continue
-        remaining = REBOOT_WAIT - (time.time() - iter_start - (data is not None and elapsed or 0))
+        remaining = REBOOT_WAIT - (time.time() - iter_start - (elapsed if data is not None else 0))
         if remaining > 0: time.sleep(remaining)
 
     print(f"\n完成: {time.strftime('%Y-%m-%d %H:%M:%S')}")

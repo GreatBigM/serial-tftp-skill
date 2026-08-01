@@ -3,8 +3,8 @@
 reboot_capture.py — 嵌入式设备循环重启 + 串口日志采集
 
 用法:
-    python3 reboot_capture.py [次数] [抓取秒数]
-    python3 reboot_capture.py 100 180   # 重启100次, 每次抓180s
+    python3 reboot_capture.py [次数] [抓取秒数] [波特率]
+    python3 reboot_capture.py 100 180 921600   # 重启100次, 每次抓180s, 921600波特率
 
 流程:
     1. 打开串口
@@ -23,7 +23,7 @@ reboot_capture.py — 嵌入式设备循环重启 + 串口日志采集
 import serial, time, subprocess, os, sys, re
 
 PORT = "/dev/ttyUSB0"
-BAUD = 115200
+BAUD = int(sys.argv[3]) if len(sys.argv) > 3 else 115200
 ITERATIONS = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 CAPTURE_SEC = int(sys.argv[2]) if len(sys.argv) > 2 else 180
 LOG_DIR = "/tmp/reboot_logs"

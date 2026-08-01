@@ -1,20 +1,35 @@
 #!/usr/bin/env python3
 """Send commands to serial device and capture output.
-Usage: python3 serial_cmd.py '<cmd>' <timeout> <baud>
+Usage: python3 serial_cmd.py '<cmd>' [timeout] [baud]
   cmd: command to send (special: \\r for newline, \\x03 for Ctrl+C)
   timeout: seconds to wait (default: 3)
-  baud: baud rate (default: 921600, <项目>=115200)
+  baud: baud rate, 'auto' (default: cached/detect), or 'detect' (force re-detect)
+
+Config subcommand:
+  python3 serial_cmd.py config show              # show all cached config
+  python3 serial_cmd.py config baud 921600       # set baud
+  python3 serial_cmd.py config port /dev/ttyUSB1 # set port
+  python3 serial_cmd.py config baud reset        # clear cache
 """
 import serial
 import time
 import sys
+import subprocess
+from flash_config import resolve_baud, handle_config_subcommand, get
+
+# ── config 子命令拦截 ──
+if handle_config_subcommand(sys.argv[1:]):
+    sys.exit(0)
 
 CMD = sys.argv[1] if len(sys.argv) > 1 else ''
 WAIT = float(sys.argv[2]) if len(sys.argv) > 2 else 3
-BAUD = int(sys.argv[3]) if len(sys.argv) > 3 else 921600
+BAUD_ARG = sys.argv[3] if len(sys.argv) > 3 else 'auto'
 MAX_CHARS = int(sys.argv[4]) if len(sys.argv) > 4 else 50000
+PORT = get("port") or '/dev/ttyUSB0'
 
-ser = serial.Serial('/dev/ttyUSB0', BAUD, timeout=0.1)
+BAUD = resolve_baud(BAUD_ARG, PORT)
+
+ser = serial.Serial(PORT, BAUD, timeout=0.1)
 ser.reset_input_buffer()
 
 if CMD == '\\r':

@@ -1,65 +1,59 @@
 # serial-tftp-skill
 
-嵌入式设备串口 + TFTP 烧录技能集（Hermes Agent skills）—— 2 个技能覆盖从串口连接、设备交互到君正 T32 NOR 烧录的完整调试链路。
+嵌入式设备串口交互与 TFTP 刷机技能（Ingenic T32 平台）。
 
-```
-serial-dev-console        串口交互与故障诊断（登录/设IP/启adbd/杀进程/查状态 + 诊断决策树 + Python 脚本）
-ingenic-basic-tftp-flash  君正 T32 NOR TFTP 烧录完整流程（TFTP server/mai_tftp/自动烧录 + 故障速查）
-```
+## 功能
 
-## 安装（推荐：一键脚本）
+- **TFTP 刷机**：环境预检 → 串口连接 → 模式判断 → 配网烧录 → 完成验证
+- **串口交互**：单命令执行、启动日志采集、循环重启测试
+- **配置缓存**：波特率/IP/TFTP目录等参数首次设定后自动复用
+
+## 安装
 
 ```bash
-# 安装全部 2 个技能
 curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash
-
-# 只装单个技能（可选）
-curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash -s -- serial-dev-console
 ```
 
-> 脚本等价于手动复制（clone + cp），不经过安全扫描，可先审阅脚本内容再执行。
-> 已安装时自动备份旧版本到 `~/.hermes/skills/<name>.bak.<时间戳>`。
-> 安装后：会话内 /reload-skills，或新开会话自动加载。
-
-## 安装（备选：手动复制）
-
+或手动：
 ```bash
 git clone https://github.com/GreatBigM/serial-tftp-skill.git
-cp -r serial-tftp-skill/serial-dev-console ~/.hermes/skills/
-cp -r serial-tftp-skill/ingenic-basic-tftp-flash ~/.hermes/skills/
+mkdir -p ~/.hermes/skills/serial-tftp
+cp serial-tftp-skill/SKILL.md ~/.hermes/skills/serial-tftp/
+cp -r serial-tftp-skill/scripts ~/.hermes/skills/serial-tftp/
+cp -r serial-tftp-skill/references ~/.hermes/skills/serial-tftp/
 ```
 
-> ⚠️ `hermes skills install`（tap/URL 方式）对含 shell 命令/AGENTS.md 引用的技能会触发安全扫描拦截（误报），
-> 且 community 来源 + dangerous 判定不可用 --force 绕过。**请使用一键脚本或手动复制。**
-
-## 快速上手
+## 首次使用
 
 ```bash
-# 1. 串口连接（serial-dev-console）：确认端口 + 波特率，登录设备
-sudo chmod 666 /dev/ttyUSB0
-python3 <skill_dir>/scripts/serial_cmd.py     # 交互式串口
+# 设定参数（自动缓存到 ~/.config/serial-tftp/config.json）
+python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config ipaddr <设备IP>
+python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config serverip <主机IP>
+python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config tftp-dir <TFTP目录>
 
-# 2. 查 IP / 启 ADB
-#    设备 shell 里: ifconfig eth0
-#    adbd 不在则: adbd --root &
-
-# 3. TFTP 烧录（ingenic-basic-tftp-flash）：自动烧录
-python3 <skill_dir>/scripts/auto-uboot-interrupt.py flash --baud <波特率>
+# 一键烧录
+python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py flash
 ```
 
-## 技能清单
+## 依赖
 
-| 技能 | 覆盖场景 | 附带脚本 |
-|------|---------|---------|
-| serial-dev-console | 登录/设IP/启adbd/杀进程/查状态/重启捕获 + 故障诊断决策树 | serial_cmd.py / capture_boot_log.py / reboot_capture.py |
-| ingenic-basic-tftp-flash | TFTP server / mai_tftp / 自动烧录 / 故障速查 | auto-uboot-interrupt.py / reboot-stress.py |
+- python3 + pyserial
+- tftpd-hpa（TFTP 服务器）
+- 串口线连接 /dev/ttyUSB0
 
-## 平台说明
+## 目录结构
 
-- 适用平台：君正 Ingenic T32 系列（NOR flash + U-Boot + mai_tftp）
-- 波特率因项目而异（典型 115200 / 921600），技能内有探测方法
-- 文中 IP/路径均为占位符（`<HOST_IP>`/`<TFTP_DIR>`/`<项目>`），按实际环境替换
-
-## License
-
-MIT
+```
+├── SKILL.md              # 技能定义（五步烧录流程）
+├── scripts/
+│   ├── flash_config.py   # 统一配置管理
+│   ├── auto-uboot-interrupt.py  # 烧录主脚本
+│   ├── serial_cmd.py     # 串口命令工具
+│   ├── capture_boot_log.py      # 启动日志采集
+│   ├── reboot_capture.py        # 循环重启采集
+│   └── reboot-stress.py         # 重启压力测试
+├── references/
+│   └── serial-console-notes.md  # 串口经验笔记
+├── install.sh
+└── README.md
+```
