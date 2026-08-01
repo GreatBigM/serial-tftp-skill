@@ -222,11 +222,18 @@ def interrupt_uboot(ser, timeout=20):
         return True
 
     print("[-] Failed to interrupt U-Boot")
-    print("    恢复方案:")
-    print("    1. 串口敲回车看实际状态")
-    print("    2. 看到 U-Boot# → 重跑: flash --at-uboot")
-    print("    3. 看到 login: → 等启动完重跑 flash")
-    print("    4. 无响应 → 物理断电重启")
+    print("    恢复方案（按优先级）:")
+    print("    1. 串口敲回车看实际状态:")
+    print("       - 看到 <名字># 或 => → 已在 U-Boot → 重跑: flash --at-uboot")
+    print("       - 看到 login: → 等启动完重跑 flash")
+    print("       - 看到 'Loading: T T' 反复 → 设备卡 mai_tftp 重试循环")
+    print("         → 等串口静默 ≥1.5s 的窗口，快速连发 Ctrl+C 打断")
+    print("           （连续 Ctrl+C 可能全落在重试间隙，要等静默再发）")
+    print("         → 回到提示符后: setenv ipaddr <新IP> 再重跑")
+    print("       - 无响应 → 物理断电重启")
+    print("    2. 若之前 TFTP 反复失败，先查 IP 冲突:")
+    print("       - 宿主机: ip neigh show | grep <设备IP> 看是否被占用")
+    print("       - 占用则换 IP: serial-tftp config ipaddr <新IP>")
     return False
 
 

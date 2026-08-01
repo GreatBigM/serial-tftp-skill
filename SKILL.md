@@ -89,11 +89,12 @@ Step 1: 建立串口连接
 
 Step 2: 模式判断
   ├─ uboot → 直接进 Step 3
-  ├─ linux → login → reboot → 砸回车卡 U-Boot → Step 3
+  ├─ linux → login → reboot → 打断 U-Boot（提示符探测：行尾 # 或 =>，非硬编码项目名）
   └─ unknown → 检查波特率 / --at-uboot / 物理断电
 
 Step 3: 配网 + 烧录
   ├─ setenv ipaddr/netmask/gatewayip/serverip
+  ├─ IP 冲突预检：ping 设备自身 IP，通 = 被占用 → 换 IP（IP 冲突是 TFTP T T T T 首要原因）
   ├─ ping 验证连通性（可选）
   └─ mai_tftp → 监控擦写输出
 
@@ -101,6 +102,11 @@ Step 4: 等待重启
   ├─ 检测 app 活信号 (cpu_loading=/seq:) 或 login:
   ├─ Kernel panic → 烧录失败
   └─ 超时 ≠ 失败（等 60-90s 再判断）
+
+失败恢复速查：
+  ├─ 卡 mai_tftp 重试循环（Loading: T T 反复）→ 等静默 ≥1.5s 窗口连发 Ctrl+C，回提示符后重跑
+  ├─ TFTP 持续 T T T T → 先查 IP 冲突（ip neigh show | grep <IP>），占用则换空闲 IP
+  └─ 打断失败 → 敲回车看状态：<名字># → --at-uboot / login: → 等启动完 / 无响应 → 断电
 ```
 
 ---
