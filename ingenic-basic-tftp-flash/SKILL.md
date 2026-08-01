@@ -20,7 +20,7 @@ python3 ~/.hermes/skills/devops/ingenic-basic-tftp-flash/scripts/auto-uboot-inte
 | <项目> | **921600** | 0xf60000（部分）/ 0x1000000（全擦） |
 | <项目> | 115200 | 0x1000000 |
 
-**失败恢复：** Failed→串口见`PRJ009#`则 `--at-uboot` / 无输出先试`--at-uboot`仍不成→断电 / exit1≠失败等60s确认 / FIT签名失败→system_a引导或全片含U-Boot
+**失败恢复：** Failed→串口见`<U-Boot提示符>#`则 `--at-uboot` / 无输出先试`--at-uboot`仍不成→断电 / exit1≠失败等60s确认 / FIT签名失败→system_a引导或全片含U-Boot
 <!-- ════════════════════════════════════════ -->
 category: devops
 metadata:
@@ -28,20 +28,11 @@ metadata:
     triggers: [tftp, 刷机, mai_tftp, tfptboot, auto_update_tftp]
 ---
 
-## 🔧 2026-07-18 脚本行为同步（铁柱优化，软链 wiki 共享源已生效）
-
-`auto-uboot-interrupt.py`（本 skill scripts/ 软链指向 wiki 单一源）已优化：
-- **`run_mai_tftp`**：检测到 `Linux version`/`Uncompressing lzma`（设备已 reset 进内核启动）即提前退出，不再傻等满 150s。实测 reset 后判断 ~9s（原 ~91s）。
-- **`verify_boot`**：改用 `cpu_loading=`/`seq:`（app 周期输出必命中）替代被 c_mi_ipc 刷屏淹没的 `login:` 判成功，一出现即返回。修正 <项目> 实测 `Login prompt not detected` 误报（原跑满 25s 仍判失败）。
-- **`interrupt_uboot`**：边砸边读即时检测（避免 write-only 期间 OS 缓冲溢出丢 `PRJ009#`）+ timeout 12s→20s + 只认交互提示符 `prj009#`/`=>`（**不认 `u-boot` banner**——banner 期提示符未就绪，setenv 发早致 ipaddr/netmask 丢失，TFTP 用旧 IP 失败）+ 命中后发 `\r` 确认就绪。实测 reboot 后 ~5s 自动打断成功，全程无需 retry。
-- **`set_network`**：发 setenv 前加 settle（`\r`+drain）兜底，确保干净提示符。
-- 完整实测日志见铁柱 wiki `projects/<项目>/reviews/flash_optimization_2026-07-18_run6.log`；踩坑细节见 `~/.claude/skills/ingenic-basic-tftp-flash/SKILL.md`（铁柱精炼版）。
-
 ## 🔀 通道选择（先看这里）
 
-本 skill 是**串口通道**（U-Boot 打断），适用于：设备离线 / adbd 挂死 / kernel panic loop / 首次刷机 / adbd_report.conf 未配置 / U-Boot 环境损坏 / 全片重刷。**<项目>/HM6802/<项目>/<项目>/<项目> 全部适用。**
+本 skill 是**串口通道**（U-Boot 打断），适用于：设备离线 / adbd 挂死 / kernel panic loop / 首次刷机 / adbd_report.conf 未配置 / U-Boot 环境损坏 / 全片重刷。**君正 T32 家族全部适用。**
 
-**设备 ADB 在线且要日常迭代按分区烧（rootfs / system_b / algo / env）？** → 用 `ingenic-adb-tftp-flash`（ADB CPSPR 通道，更快更静，同芯片方案家族通用，首次换项目需按分区表适配 gen 脚本）。
+**设备 ADB 在线且要日常迭代按分区烧（rootfs / system_b / algo / env）？** → 用 ADB CPSPR 通道（更快更静，同芯片方案家族通用，首次换项目需按分区表适配）。
 
 ## ⚡ 快速参考
 
@@ -56,8 +47,8 @@ python3 <skill_dir>/scripts/auto-uboot-interrupt.py flash
 # ✅ 正确：从 skill 目录运行
 cd <skill_dir>/ingenic-basic-tftp-flash && python3 scripts/auto-uboot-interrupt.py flash
 
-# ✅ 等效：从 wiki 源路径运行
-python3 ~/qwiki/projects/_toolkit/scripts/auto-uboot-interrupt.py flash
+# ✅ 等效：用绝对路径运行
+python3 <skill_dir>/scripts/auto-uboot-interrupt.py flash
 
 # ❌ 错误：从项目根目录运行（无 scripts/ 目录）
 cd <TFTP_DIR> && python3 scripts/auto-uboot-interrupt.py flash
@@ -94,7 +85,7 @@ auto-uboot-interrupt.py flash 报 Failed to interrupt U-Boot
   │
   ▼ 立即发回车看串口返回（检查波特率 --baud！<项目>=921600）
   │
-  ├── 看到 PRJ009# / => / <项目>#
+  ├── 看到 <U-Boot提示符># / => / <项目>#
   │   → ✅ 设备实际已在 U-Boot！
   │   → 脚本只是错过 ~1s bootdelay 检测窗口，设备状态完全正确
   │   → 立即 retry（不需放弃，不需断电）:
@@ -128,7 +119,7 @@ cd /tmp && echo -e "get <项目>_NOR_ALL.bin\\nquit" | tftp 127.0.0.1 && ls -lh 
 
 打开串口后发一个回车，看返回什么：
 ```
-# 如果看到 PRJ009# / <项目># / =>  → 直接在 U-Boot 中
+# 如果看到 <U-Boot提示符># / <项目># / =>  → 直接在 U-Boot 中
 # 如果看到 设备厂商 login: / [root@设备厂商:]$  → 在 Linux 中
 # 如果无任何输出 → 设备未上电
 ```
@@ -154,7 +145,7 @@ reboot
 # 立即猛按回车 12 秒...
 
 # 抓到 U-Boot 后设网络烧录
-# ⚠️ 确认 PRJ009# 提示符再发命令，发到 Linux shell 会打坏终端
+# ⚠️ 确认 <U-Boot提示符># 提示符再发命令，发到 Linux shell 会打坏终端
 setenv ipaddr <DEV_IP>
 setenv netmask 255.255.254.0
 setenv gatewayip <HOST_IP>
@@ -193,8 +184,8 @@ python3 scripts/auto-uboot-interrupt.py flash
 
 ## 适用平台
 
-- **<项目>** (Ingenic T32, PRJ009) — auto_update_tftp.txt, 16MB SPI NOR **EN25QX128A**
-- **<项目>** (Ingenic T32, PRJ009) — auto_update_tftp.txt, 16MB SPI NOR EN25QX128A
+- **<项目>** (Ingenic T32, <U-Boot提示符>) — auto_update_tftp.txt, 16MB SPI NOR **EN25QX128A**
+- **<项目>** (Ingenic T32, <U-Boot提示符>) — auto_update_tftp.txt, 16MB SPI NOR EN25QX128A
 
 ## 前置条件
 
@@ -312,7 +303,7 @@ adb connect <IP>:5555
 
 ### 3a. 设备已在 U-Boot 提示符下（常见场景）
 
-如果设备因刷机中断、kernel panic 后 fallback 等原因已经停在 `PRJ009#` 或 `=>` 提示符下，不需要 reboot + 打断步骤，直接从③开始：
+如果设备因刷机中断、kernel panic 后 fallback 等原因已经停在 `<U-Boot提示符>#` 或 `=>` 提示符下，不需要 reboot + 打断步骤，直接从③开始：
 
 ```bash
 # ③ U-Boot 设网络（确认主机 IP 和网段）
@@ -415,14 +406,14 @@ saveenv
 |--------|------|---------|
 || **跨项目套用擦除规则，不经确认直接修改 auto_update_tftp.txt** | 不同项目的擦除范围不同：<项目> 全擦 `0x1000000`（临时 bug 绕避），<项目> 默认部分擦 `0xf60000`。不确认就改 -> 改了还要改回来。浪费一轮烧录。 | 擦除范围是项目特定的，先确认项目需要再改。拿不准就问用户。**<项目> 全擦是临时 bug 绕避（未烧录 MAC 地址）。<项目> 默认部分擦 `0xf60000`，用户要求全擦时才改 `0x1000000`。** |
 | `sf erase 0x0 0xf60000` 而非 `0x1000000`（仅 <项目>） | <项目>：log分区尾部不受擦除，旧JFFS2数据跨烧录保留。旧SDK的KV数据残留->新SDK读旧格式->SIGSEGV | <项目> 临时用全量16MB擦写 `sf erase 0x0 0x1000000`。**这是 bug 绕避，不是永久配置。** <项目> 默认用 `0xf60000`（部分擦保留log分区），不需要改。<项目> 修复后也改回部分擦。 |
-| 没确认 U-Boot 提示符就执行 mai_tftp | `mai_tftp` 发到 Linux shell 会打坏终端，login 进程挂死，必须断电恢复（2026-06-17） | 确认 `PRJ009#`/`=>` 再发 U-Boot 命令。看到 `login:` 或 `root@` 立即中止 |
+| 没确认 U-Boot 提示符就执行 mai_tftp | `mai_tftp` 发到 Linux shell 会打坏终端，login 进程挂死，必须断电恢复（2026-06-17） | 确认 `<U-Boot提示符>#`/`=>` 再发 U-Boot 命令。看到 `login:` 或 `root@` 立即中止 |
 | 刷完 c_mi_ipc 反复 SIGSEGV 崩溃（仅 <项目>） | log 分区残留旧 KV 数据导致。<项目> 改为 `0x1000000` 全量 16MB 擦除后问题完全消失。<项目> 无此问题（默认 `0xf60000` 即可） | <项目>：修改源文件 `device/soc/ingenic/pkg_tool/<项目>/auto_update_tftp.txt`，部分擦改为 `0x1000000` -> commit -> `make pack_firmware` -> 重烧。<项目>：默认不改。已触发时恢复：`rm -rf /data/* && reboot` |
 | 改了 U-Boot 源码后只 `make INGENIC` + `make pack_firmware`，忘记 `make pack_all` | NOR_ALL.bin 未更新 U-Boot 改动 | 改 U-Boot 后 → `make INGENIC && make pack_all` |
 | `reboot shutdown` 用于重启 | 内核死循环，必须物理断电恢复 | 永远只传 `reboot`，不加参数 |
 | 烧录后不查 IP 直接连 ADB | DHCP 重分配，IP 变了连不上 | 切模式后重新 `ifconfig eth0` 查 IP |
 | **先讲解手动步骤再执行脚本** | 用户说"烧录"后，AI 先列出 reboot → setenv → mai_tftp 等一串手工命令，而不是直接执行 auto-uboot-interrupt.py。用户纠正"你忘记技能了吗"。浪费一轮对话，让用户感觉 AI 没记住已有自动化工具。 | **听到"烧录"直接 terminal() 跑脚本。** 串口命令序列仅在脚本不可用时作为备选方案出现。技能有脚本就在 `快速参考` 第一条展示，不要跳到第3节的"手动刷机步骤"。 | | 脚本失败后直接手动 `sf erase 0 0x100000` + `sf write 0 0x1000000` → 只擦 1MB 写 16MB → NOR 未擦区域数据损坏 → U-Boot 启动区被破坏 → 设备变砖 | **技能失败时：** ①读 Usage/--help 看有没有参数能处理当前场景 ②读失败信息 ③修技能本身 ④只有技能完全不适用才创造新技能。**不要绕过技能。** |
 | **试图用 ADB + dd 烧录内核代替 TFTP**（2026-07-01 <项目> 踩坑） | `flash_erase` 命令在设备上不存在（busybox 未集成 mtd-utils）。`flash_kernel.sh` 脚本尝试 `adb shell flash_erase` 失败后 fallback 到无擦除直接 dd -> NOR 旧数据和 uImage 混叠 -> MD5 不匹配 -> 重启后 kernel 仍运行旧版本。同时设备被 reboot，需重新等待启动，浪费 2 轮烧录时间。 | **烧录优先用 TFTP + U-Boot mai_tftp。** 后端（内核/驱动）改动后正确流程：`build_kernel.sh` 编译 -> `auto-uboot-interrupt.py flash` TFTP 烧录。ADB 仅适合推送用户态二进制到已运行的设备，不适用于 NOR flash 写入。如果误执行 flash_kernel.sh 把内核分区写脏了：TFTP 全量重新烧录一次即可恢复，无需担心数据残留。**注意**：设备 busybox 有 `flash_eraseall` applet（无 `flash_erase`/`flashcp`），CPSPR + 串口都失败时可用 `flash_eraseall -q /dev/mtdN && dd if=<img> of=/dev/mtdN bs=4096` 作为最后手段（见 ingenic-adb-tftp-flash skill「ADB 直写 mtd 分区」章节）。**cat 写 /dev/mtd 不可靠**（MD5 不匹配），必须用 dd。 |
-| **auto-uboot-interrupt.py 在 <项目> 921600 波特率下 reboot 后未能打断 autoboot**（2026-07-15 踩坑，2026-07-17 波特率纠正为 921600，非 1500000） | 脚本 interrupt_uboot 在 reboot 后持续砸回车 12 秒，但 U-Boot bootdelay=1 秒窗口太短，reboot 到 U-Boot 启动有时间差，回车可能没覆盖到那个窗口。脚本误判打断成功（输出含 "U-Boot" 字样），继续发 mai_tftp 到了 Linux shell。autoboot 倒计时走完（"Hit any key to stop autoboot: 1 0"），设备正常启动了 Linux，TFTP 烧录根本没执行。 | ①检查串口日志确认是否真正进入 U-Boot（看 `PRJ009#` 提示符，不要只看 "U-Boot" 字样）。②如果 autoboot 没被打断，手动串口控制：先 reboot，在倒计时窗口内手动按回车确认进入 U-Boot，再 setenv 网络 + mai_tftp。③或用 `--at-uboot` 参数（设备已在 U-Boot 时跳过打断步骤）。 |\n\n> **串口噪音处理：** 脚本内置 retry 机制——首次登录失败后自动 `killall -9 apphilogcat c_mi_ipc miio_client 2>/dev/null` 降噪再重试。手动登录时同理。如果 `killall` 命令因日志洪流（如 AIM motion detection 每 ~300ms 刷屏）无法送达 shell，改用 `paramset ohos.ctl.stop apphilogcat` 通过 init 框架停止日志服务再重试。
+| **auto-uboot-interrupt.py 在 <项目> 921600 波特率下 reboot 后未能打断 autoboot**（2026-07-15 踩坑，2026-07-17 波特率纠正为 921600，非 1500000） | 脚本 interrupt_uboot 在 reboot 后持续砸回车 12 秒，但 U-Boot bootdelay=1 秒窗口太短，reboot 到 U-Boot 启动有时间差，回车可能没覆盖到那个窗口。脚本误判打断成功（输出含 "U-Boot" 字样），继续发 mai_tftp 到了 Linux shell。autoboot 倒计时走完（"Hit any key to stop autoboot: 1 0"），设备正常启动了 Linux，TFTP 烧录根本没执行。 | ①检查串口日志确认是否真正进入 U-Boot（看 `<U-Boot提示符>#` 提示符，不要只看 "U-Boot" 字样）。②如果 autoboot 没被打断，手动串口控制：先 reboot，在倒计时窗口内手动按回车确认进入 U-Boot，再 setenv 网络 + mai_tftp。③或用 `--at-uboot` 参数（设备已在 U-Boot 时跳过打断步骤）。 |\n\n> **串口噪音处理：** 脚本内置 retry 机制——首次登录失败后自动 `killall -9 apphilogcat c_mi_ipc miio_client 2>/dev/null` 降噪再重试。手动登录时同理。如果 `killall` 命令因日志洪流（如 AIM motion detection 每 ~300ms 刷屏）无法送达 shell，改用 `paramset ohos.ctl.stop apphilogcat` 通过 init 框架停止日志服务再重试。
 
 | 脚本运行后 terminal 输出完全为空 (0 字节、0 行) | 串口端口被上一个 session 的残留进程占用，或 pyserial 参数被污染。`stty` 重置后仍无输出时，设备可能处于半死状态（login 进程挂死或 U-Boot 中断后无响应）。 | Step 0 串口预检已自动处理 `fuser -k` + `stty` 重置 + 发 `\\r` 验证回显。如果仍无响应，物理断电重启设备。 |
 | 传参 `--serial /dev/ttyUSB0` 而非 `--port /dev/ttyUSB0`（2026-07-17 踩坑） | `auto-uboot-interrupt.py` 的参数名是 `--port` 不是 `--serial`。错误参数会被 argparse 拒绝：`error: unrecognized arguments: --serial /dev/ttyUSB0`。加 `--port` 前浪费一轮修复错误。 | 记住参数名是 `--port`。查看 usage: `python3 auto-uboot-interrupt.py --help`。在使用任意 Python 脚本前先 `--help` 确认参数名，不要靠猜。已踩过坑：`h` 参数（实际是 `--help`）、`--serial`（实际是 `--port`）。 |
@@ -430,7 +421,7 @@ saveenv
 | 改了配置文件后只做增量编译 | 文件不进入镜像 | 改配置文件后必须大编译或至少 `make pack_firmware` |
 | **编译后不验证 .ko 一致性就烧录** | `make_drivers.sh` 把新模块装进 `.tmp/driver/`，但 `system_b.squashfs` 从 `.tmp/system_b/lib/modules/` 打包旧模块。设备跑着新内核 + 旧驱动，问题表现诡异（`cat /proc/version` 显示新时间戳但 bug 依旧）。 | 烧录前：`md5sum .tmp/driver/tx-isp*.ko` vs `unsquashfs system_b.img` 中的对应文件。不一致则 `cp .tmp/driver/*.ko .tmp/system_b/lib/modules/` 后重打包。 |
 | **只改 output 没改 source 的 auto_update_tftp.txt** | `make pack_firmware` 从 source 复制覆盖 output，下次编译后改动丢失 | 源码 + 产物双份改。source 在 `device/soc/ingenic/pkg_tool/<项目>/auto_update_tftp.txt`（持久化），output 在 `out/image_<项目>/auto_update_tftp.txt`（立即生效）。编译前改 source 就行；编译后不改 source 只改 output 的话，下次编译会被覆盖 |
-| **改了 kernel/.../arch/mips/xburst/lib/isp/ 下的 ISP 源码但实际没用上** | <项目> 的 defconfig 没使能 `CONFIG_VIDEO_TX_ISP`，内嵌 ISP 代码不会被编译。实际加载的模块来自 `drivers/t32_t33/isp/tx-isp-PRJ009/`（外部模块，通过 `make_drivers.sh` 构建）。内嵌内核的 ISP 源码只用于 zeratul 平台。浪费了几轮合并工作。 | 改 ISP 驱动前先追踪编译路径：①查 `defconfig` 中 `CONFIG_VIDEO_TX_ISP` 是否使能 ②查 `init.sh` 中 `insmod` 路径 ③查 `make_drivers.sh` 中 `cd` 到哪个目录构建。 |\n| **PHY 初始化显示 SPEED:0, DUPLEX:0 就认为网络不通，中断烧录** | `mai_tftp` 首次初始化 GMAC PHY 时，SPEED:0, DUPLEX:0 是**瞬态**状态（PHY 寄存器尚未稳定或 autonegotiation 未完成），不是最终结果。GMAC 驱动会内部重试，后续（第二个 tftpboot）可正确协商到 SPEED:2 (100M), DUPLEX:2 (Full)。如果看到 SPEED:0 就 panic 或中断烧录，可能错过已经在进行的擦写操作，甚至中断 sf erase 导致 NOR 处于不一致状态。 | **等待。** `mai_tftp` 输出可能看起来断断续续——第一阶段 `tftpboot rootfs.img` 显示 SPEED:0 但仍成功下载并执行 erase+write，第二阶段 `tftpboot kernel_system_b.image` 时 PHY 已正确协商。只要看到 `sf write ... Written: OK` 和 `reset`，烧录就是完整的。用 `(python3 -c '...监控串口...')` 持续读取 90s 不要提前退出。观察到 `SPEED:0` 后继续等，不要中断。 |
+| **改了 kernel/.../arch/mips/xburst/lib/isp/ 下的 ISP 源码但实际没用上** | <项目> 的 defconfig 没使能 `CONFIG_VIDEO_TX_ISP`，内嵌 ISP 代码不会被编译。实际加载的模块来自 `drivers/t32_t33/isp/tx-isp-<平台>/`（外部模块，通过 `make_drivers.sh` 构建）。内嵌内核的 ISP 源码只用于 zeratul 平台。浪费了几轮合并工作。 | 改 ISP 驱动前先追踪编译路径：①查 `defconfig` 中 `CONFIG_VIDEO_TX_ISP` 是否使能 ②查 `init.sh` 中 `insmod` 路径 ③查 `make_drivers.sh` 中 `cd` 到哪个目录构建。 |\n| **PHY 初始化显示 SPEED:0, DUPLEX:0 就认为网络不通，中断烧录** | `mai_tftp` 首次初始化 GMAC PHY 时，SPEED:0, DUPLEX:0 是**瞬态**状态（PHY 寄存器尚未稳定或 autonegotiation 未完成），不是最终结果。GMAC 驱动会内部重试，后续（第二个 tftpboot）可正确协商到 SPEED:2 (100M), DUPLEX:2 (Full)。如果看到 SPEED:0 就 panic 或中断烧录，可能错过已经在进行的擦写操作，甚至中断 sf erase 导致 NOR 处于不一致状态。 | **等待。** `mai_tftp` 输出可能看起来断断续续——第一阶段 `tftpboot rootfs.img` 显示 SPEED:0 但仍成功下载并执行 erase+write，第二阶段 `tftpboot kernel_system_b.image` 时 PHY 已正确协商。只要看到 `sf write ... Written: OK` 和 `reset`，烧录就是完整的。用 `(python3 -c '...监控串口...')` 持续读取 90s 不要提前退出。观察到 `SPEED:0` 后继续等，不要中断。 |
 | **烧录脚本输出为空（0 bytes），不断超时** | 串口 `/dev/ttyUSB0` 残留了上一个 session 的 pyserial 状态（参数污染），导致 pyserial 能 write 但 read 始终返回空。即使 `fuser -k` 杀掉旧进程，pyserial 的端口参数（timeout、波特率等）仍然不匹配。 | ⚠️ 此问题 **已修复**（2026-07-01）：`auto-uboot-interrupt.py` Step 0 已内置 `fuser -k` + `stty` 重置 + 发 `\r` 验证回显。如需绕过预检，加 `--no-precheck`。如果仍烧录输出为空，手动 `sudo stty -F /dev/ttyUSB0 115200 cs8 -cstopb -parenb raw -echo -echoe -echok` 重置端口参数，然后物理断电重启设备。 |
 | **手动替换 NOR_ALL.bin 中的 squashfs（不重建完整镜像）** | 把新编译的 .ko 手动复制到 staging 后，不通过 `make && make pack_firmware` 重建 NOR_ALL.bin，而是用 `dd`/python 在 NOR_ALL.bin 的固定偏移处替换 squashfs。后果：① squashfs 大小变了 → 分区边界偏移量被破坏 → 后续 FIT image 起始地址错位。② 新 squashfs 小于旧 squashfs 时，填充的 0xFF 区域被 U-Boot 当作 bootm 内核 FIT 读取 → `Wrong Image Format`。③ 设备只能从备选 slot 手动启动（见 4b），直到重新烧录正确的全量镜像。 | **只通过 build 系统重建 NOR_ALL.bin。** 流程：`cp .tmp/driver/*.ko .tmp/system_a/lib/modules/ && cp .tmp/driver/*.ko .tmp/system_b/lib/modules/ && cmake ... && make -j && make pack_firmware`。如无法运行 Docker 编译，用 `mksquashfs` 重建 squashfs 后通过 `mai_tftp` 全量烧录。**不要直接在 NOR_ALL.bin 上 patch。** | | `make pack_firmware` 不会全量重建所有分区镜像。`build_app.sh` 只执行 `make c_mi_ipc + make pack_firmware`，但 pack_firmware 可能因为依赖判断不更新 system_b.img 和 NOR_ALL.bin。产出物 `.tmp/bin/c_mi_ipc` 与 `.tmp/system_b/bin/c_mi_ipc` 时间戳不同步。 | 增量编译后，手动复制二进制到 staging 目录再执行 `make pack_all`：`cp build/applications/c_mi_ipc/c_mi_ipc out/image_<project>/.tmp/system_b/bin/ && docker run ... make pack_all`。或直接用 `build.sh` 全量编译保底。`build_app.sh` 应改为执行 `make c_mi_ipc && make pack_all` 而非 `make pack_firmware`。 |
 | **用未 strip 的编译产物 MD5 对比固件内 strip 后的二进制**（2026-07-17 <项目> 踩坑） | `build/applications/c_mi_ipc/c_mi_ipc`（~47MB，含调试符号未 strip）与固件 `system_b.img` 内的 `c_mi_ipc`（~7MB，strip 后）MD5 永远不同。用 `build/` 产物对比设备二进制会误判为"pack_firmware 没打包最新产物"，浪费一轮排查。 | **对比 strip 后的 staging 二进制**：①`md5sum out/image_<项目>/.tmp/bin/c_mi_ipc`（strip 后 ~7MB）vs 设备 `adb shell md5sum /system/bin/c_mi_ipc` ②或从固件提取：`unsquashfs -f -d /tmp/sys_check out/image_<项目>/system_b.img bin/c_mi_ipc && md5sum /tmp/sys_check/bin/c_mi_ipc`。**绝不用 `build/` 目录的未 strip 产物做对比。** 判断 strip 与否看文件大小：~47MB=未 strip，~7MB=strip 后。 |
@@ -456,13 +447,13 @@ cat /proc/version
 # 确认显示最新的编译时间戳
 
 # 检查 .ko 模块 MD5（在设备上）
-md5sum /system/lib/modules/tx-isp-PRJ009.ko
+md5sum /system/lib/modules/tx-isp-<平台>.ko
 # 在宿主对比编译产出
-md5sum out/image_<项目>/.tmp/driver/tx-isp-PRJ009.ko
+md5sum out/image_<项目>/.tmp/driver/tx-isp-<平台>.ko
 # 在宿主对比打包镜像中的版本
 unsquashfs -ll out/image_<项目>/system_b.img lib/modules/ 2>/dev/null | grep .ko
-unsquashfs -f -d /tmp/sys_check out/image_<项目>/system_b.img lib/modules/tx-isp-PRJ009.ko
-md5sum /tmp/sys_check/lib/modules/tx-isp-PRJ009.ko
+unsquashfs -f -d /tmp/sys_check out/image_<项目>/system_b.img lib/modules/tx-isp-<平台>.ko
+md5sum /tmp/sys_check/lib/modules/tx-isp-<平台>.ko
 
 # 批量对比所有 .ko
 diff <(cd .tmp/driver && md5sum *.ko | sort) <(unsquashfs -f -d /tmp/sys_check out/image_<项目>/system_b.img 2>/dev/null && cd /tmp/sys_check/lib/modules && md5sum *.ko | sort) 2>/dev/null
@@ -592,7 +583,7 @@ adb shell cat /tmp/miio_client.log | grep -c "mjac_init error"
 |------|------|------|
 | `No ethernet found` | 以太网未初始化 | `mai_tftp` 会自动初始化 GMAC |
 | `Timeout` | IP/网关不在同一网段 | 检查 `ipaddr`、`serverip`、`netmask` |
-脚本报 `Device mode: unknown` 或 `Failed to interrupt U-Boot` 后失败 | 设备串口输出被应用日志淹没，脚本无法识别 login 提示符。或设备已停在 U-Boot 提示符（如之前烧录中断、kernel panic 后 fallback），脚本的 Step 1 登录超时检测误判。**常见假阴性**：脚本报 `Failed to interrupt U-Boot` 但实际上设备已经在 PRJ009# 提示符下（串口可见），只是脚本没检测到 - 波特率参数 `--baud` 不匹配（<项目> 用 921600 非默认 115200，2026-07-17 纠正，非 1500000），或 Step 0/1 的状态判断超时。CMA=4MB + T32Pro ISP 驱动时 ISP/VPU 完全不启动（所有计数器为 0），也会导致设备无响应。 | **先确认设备状态：** 串口敲回车看返回。返 `PRJ009#` -> **即使在 U-Boot！直接用 `flash --at-uboot --baud 921600` 跳过 Steps 0-1 烧录。** 返 `login:` -> 等设备完全启动后再跑脚本。若串口完全无回显，先检查 `--baud` 参数（<项目> 用 921600）。同时给 `--no-precheck` 跳过被污染串口端口的预检。确认设备在 U-Boot 但脚本三次检测不到时，可手动烧录。**注意：手动烧录前务必确认 U-Boot 提示符，`mai_tftp` 发到 Linux shell 会打坏终端。** |
+脚本报 `Device mode: unknown` 或 `Failed to interrupt U-Boot` 后失败 | 设备串口输出被应用日志淹没，脚本无法识别 login 提示符。或设备已停在 U-Boot 提示符（如之前烧录中断、kernel panic 后 fallback），脚本的 Step 1 登录超时检测误判。**常见假阴性**：脚本报 `Failed to interrupt U-Boot` 但实际上设备已经在 <U-Boot提示符># 提示符下（串口可见），只是脚本没检测到 - 波特率参数 `--baud` 不匹配（<项目> 用 921600 非默认 115200，2026-07-17 纠正，非 1500000），或 Step 0/1 的状态判断超时。CMA=4MB + T32Pro ISP 驱动时 ISP/VPU 完全不启动（所有计数器为 0），也会导致设备无响应。 | **先确认设备状态：** 串口敲回车看返回。返 `<U-Boot提示符>#` -> **即使在 U-Boot！直接用 `flash --at-uboot --baud 921600` 跳过 Steps 0-1 烧录。** 返 `login:` -> 等设备完全启动后再跑脚本。若串口完全无回显，先检查 `--baud` 参数（<项目> 用 921600）。同时给 `--no-precheck` 跳过被污染串口端口的预检。确认设备在 U-Boot 但脚本三次检测不到时，可手动烧录。**注意：手动烧录前务必确认 U-Boot 提示符，`mai_tftp` 发到 Linux shell 会打坏终端。** |
 | `File not found` | TFTP 目录或文件名不对 | 检查 `/etc/default/tftpd-hpa` 的 `TFTP_DIRECTORY` |
 | 刷完 c_mi_ipc 反复 SIGSEGV 崩溃（仅 <项目>） | log 分区残留旧 KV 数据。<项目> 需全量 16MB 擦除 (`0x1000000`) 预防。<项目> 默认部分擦 `0xf60000` 不用改 | <项目>: 全量 16MB 擦除。已触发: `rm -rf /data/* && reboot`。修复后 `dmesg | grep -c \"Segmentation fault\"` 应为 0 |
 | 刷完 <项目> 后 wlan0 无 IP，WiFi 配置丢失（2026-07-11） | <项目> 全擦或部分擦 algo 分区时被清空。工厂 env（MAC=默认）被重置，WiFi 配置存储在 algo 分区或 /data 中。wlan0 启动后 RX/TX=0，无 IP。| 烧录后检查：`adb shell ifconfig wlan0`。配网步骤。**注意** `/var/run/wpa_supplicant` 是只读，ctr_interface 必须用 `/tmp/wpa`。 |

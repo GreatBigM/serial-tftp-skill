@@ -2,13 +2,13 @@
 # serial-tftp-skill 一键安装脚本（串口 + TFTP 烧录技能集）
 # 用法:
 #   安装全部: curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash
-#   安装单个: curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash -s -- serial-setup
+#   安装单个: curl -fsSL https://raw.githubusercontent.com/GreatBigM/serial-tftp-skill/main/install.sh | bash -s -- serial-dev-console
 # 等价于手动复制，不经过 hermes skills install 的安全扫描
 set -euo pipefail
 
 REPO_URL="https://github.com/GreatBigM/serial-tftp-skill.git"
 SKILLS_DIR="${HOME}/.hermes/skills"
-SKILLS=("serial-setup" "serial-dev-console" "ingenic-flash" "ingenic-basic-tftp-flash")
+SKILLS=("serial-dev-console" "ingenic-basic-tftp-flash")
 
 # 参数：可选指定单个技能名
 TARGET="${1:-}"

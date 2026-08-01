@@ -128,7 +128,8 @@ def detect_mode(ser):
     ser.write(b"\r\n")
     time.sleep(1)
     out = drain(ser).decode(errors="replace").lower()
-    if any(p in out for p in ["prj009#", "<项目>#", "<项目>#", "=>"]):
+    # U-Boot 提示符匹配列表：prj009# 为当前平台默认，<项目># 按设备实际提示符增补
+    if any(p in out for p in ["prj009#", "<项目>#", "=>"]):
         return "uboot"
     elif any(p in out for p in ["login:", "root@", "# "]):
         return "linux"
@@ -183,14 +184,14 @@ def interrupt_uboot(ser, timeout=20):
     2013.07...) 出现时就命中, 但提示符尚未就绪, set_network 的 setenv 发早,
     ipaddr/netmask 未生效, TFTP 用旧 IP 失败。
     修复: 边砸边读 (read 夹在 write 间) 避免缓冲溢出丢提示符; timeout 延到 20s
-    覆盖 reboot 时长; marker 只认交互提示符 (prj009#/<项目>#/<项目>#/=>),
+    覆盖 reboot 时长; marker 只认交互提示符 (prj009#/<项目>#/=>),
     不认 "u-boot" banner; 命中后再发 \r 确认提示符就绪才返回。
     """
     print("[*] Sending reboot...")
     ser.write(b"reboot\r")
     # 只认交互提示符 (含 # 或 =>), 不认 "u-boot" banner — banner 出现时
     # 提示符尚未就绪, setenv 会发早丢失 (<项目> 实测 ipaddr/netmask 未生效)
-    MARKERS = ["prj009#", "<项目>#", "<项目>#", "=>"]
+    MARKERS = ["prj009#", "<项目>#", "=>"]
     end = time.time() + timeout
     buf = ""
     while time.time() < end:

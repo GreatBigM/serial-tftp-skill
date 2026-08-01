@@ -1,13 +1,13 @@
 ---
 name: serial-dev-console
-description: 嵌入式设备串口交互 — 登录、设IP、启adbd、杀进程、查状态
+description: 嵌入式设备串口交互与故障诊断 — 登录、设IP、启adbd、杀进程、查状态、诊断决策树
 category: devops
 metadata:
   hermes:
-    triggers: [串口, 串口登录, serial console, ttyUSB, mai_tftp, TFTP烧录, uboot烧录, 网络烧录, 串口烧录]
+    triggers: [串口, 串口登录, serial console, ttyUSB, mai_tftp, TFTP烧录, uboot烧录, 网络烧录, 串口烧录, 乱码, 无响应, 日志洪流, login失败]
 ---
 
-# 串口设备交互
+# 串口设备交互与故障诊断
 
 > 通过 python3 serial 脚本与嵌入式设备交互，避开 ADB 不可用时的窘境
 
@@ -24,7 +24,7 @@ metadata:
 | <项目> | 115200 | 默认值 |
 | <项目> | **921600** | 2026-07-17 实测纠正，非 1500000 |
 
-波特率不对 -> 串口全是二进制乱码。代码模板中的 `BAUD` 变量需按项目设置。未知设备用 `ingenic-adb-setup` 的「波特率探测」逐一尝试 [921600, 115200, 1500000, 57600, 9600]。
+波特率不对 -> 串口全是二进制乱码。代码模板中的 `BAUD` 变量需按项目设置。未知设备用「波特率探测」逐一尝试 [921600, 115200, 1500000, 57600, 9600]。
 
 ### ⚠️ 第一件事：确认串口是否双向（TX 通）
 
@@ -380,9 +380,9 @@ echo 'dd if=/dev/zero of=/dev/watchdog bs=1 count=100' > /dev/ttyUSB0
 
 > **排查原则（2026-06-16 用户纠正）：** 怀疑设备状态异常时，先用 ADB 或串口在设备上实际验证，不要仅靠构建产物推断。c_mi_ipc 的 exit 127 可能是串口 shell 环境问题（`&` 后台进程被 SIGHUP），不是库路径问题。库在 rootfs 的 `/usr/lib/` 中。
 
-**⚠️ 滥发 U-Boot 命令到 Linux shell 导致终端挂死（2026-06-17 <项目> 踩坑）：** 当 `mai_tftp`、`setenv` 等 U-Boot 命令意外发送到 Linux shell 时，shell 尝试执行这些无效命令。后续串口仅剩硬件回显（输入字符能看到，但 login 进程挂死），`ser.read()` 只返回 `\\\\r\\\\n`，无 shell 响应。**必须通过物理断电或看门狗复位恢复，Break 信号无效。** 避免方法：发送任何 U-Boot 命令前先确认收到 `PRJ009#` 或 `=>` 提示符。
+**⚠️ 滥发 U-Boot 命令到 Linux shell 导致终端挂死（2026-06-17 <项目> 踩坑）：** 当 `mai_tftp`、`setenv` 等 U-Boot 命令意外发送到 Linux shell 时，shell 尝试执行这些无效命令。后续串口仅剩硬件回显（输入字符能看到，但 login 进程挂死），`ser.read()` 只返回 `\\\\r\\\\n`，无 shell 响应。**必须通过物理断电或看门狗复位恢复，Break 信号无效。** 避免方法：发送任何 U-Boot 命令前先确认收到 `<U-Boot提示符>#` 或 `=>` 提示符。
 
-**⚠️ `mai_tftp` 烧录后不要锤击 Enter（2026-06-19 <项目> 踩坑）：** `mai_tftp` 逐行执行 `auto_update_tftp.txt`，最后一条是 `reset`。设备自动重启后，会显示 `Hit any key to stop autoboot: 1 0` 倒计时。**此时必须停止敲 Enter，否则会打断 kernel 自启，设备卡在 `PRJ009#` 提示符。** 正确做法：烧录监控脚本检测到 `reset` 关键字后，立即停止写串口，只读等待，让 kernel 自然启动。等 `login:` 出现再交互。
+**⚠️ `mai_tftp` 烧录后不要锤击 Enter（2026-06-19 <项目> 踩坑）：** `mai_tftp` 逐行执行 `auto_update_tftp.txt`，最后一条是 `reset`。设备自动重启后，会显示 `Hit any key to stop autoboot: 1 0` 倒计时。**此时必须停止敲 Enter，否则会打断 kernel 自启，设备卡在 `<U-Boot提示符>#` 提示符。** 正确做法：烧录监控脚本检测到 `reset` 关键字后，立即停止写串口，只读等待，让 kernel 自然启动。等 `login:` 出现再交互。
 
 **⚠️ `switch_mode.sh debug` 会立即触发 reboot（2026-06-19 <项目> 踩坑）：** 在 Linux shell 中执行 `switch_mode.sh debug` 后，设备**不会在本次启动中切换模式**，而是打印 `Enter user debug mode!!!` 后立即重启。**测试脚本不能** `switch_mode.sh debug` → 等 20s 检查 c_mi_ipc，因为设备正在重启。正确流程：`switch_mode.sh debug` → 等 reboot 完成 → 重新登录 → 再检查。
 
@@ -696,7 +696,7 @@ echo "nameserver <dns_ip>" > /etc/resolv.conf
 
 ### 收集性能参数
 
-内存/CPU/Flash 基准采集详见 `bench-device-performance` 技能：
+内存/CPU/Flash 基准采集：
 ```bash
 cat /proc/meminfo; free -k; cat /proc/loadavg
 cat /proc/mtd; df -k; mount
@@ -879,7 +879,7 @@ def blind_login(ser, attempts=15):
 
 **"reboot 前必须先 login" 的例外：** 当盲打 burst 后验证失败时，**仍然可以发送 reboot**。因为 15 次盲打中至少有一次成功登录了，随后的 `reboot\\r` 会被已登录的 shell 执行。如果盲打全部失败（极低概率下），reboot 被 login 吃掉也无妨——下一轮盲打 burst 会继续尝试。
 
-相关脚本：`~/qwiki/projects/_toolkit/scripts/<项目>-reboot-20x3min.py`（盲打 burst + 立即 capture 的完整实现，用于 N 次循环重启日志采集）
+相关脚本：`<skill_dir>/scripts/<项目>-reboot-20x3min.py`（盲打 burst + 立即 capture 的完整实现，用于 N 次循环重启日志采集）
 
 ### 3. reboot 前必须先 login（否则静默失效）
 
@@ -893,7 +893,7 @@ def blind_login(ser, attempts=15):
 2. **stdout 缓冲问题**：嵌入式系统 stdout 是行缓冲的，重定向到文件后 `printf` 可能不立即写入。用 `fprintf(stderr, ...)` 替代可保证即时输出（stderr 无缓冲）
 3. **超时**：busybox 命令通常 1-2s 返回，复杂命令（如 mount）3-5s
 3. **无 root 权限**：`sudo chmod 666 /dev/ttyUSB0` 才能读写串口
-4. **波特率（项目相关，不硬编码）**：<项目> = 115200，<项目> = 921600（2026-07-17 实测纠正，非 1500000）。代码模板中的 `BAUD` 变量需按项目设置。未知设备用 ingenic-adb-setup 的「波特率探测」逐一尝试
+4. **波特率（项目相关，不硬编码）**：<项目> = 115200，<项目> = 921600（2026-07-17 实测纠正，非 1500000）。代码模板中的 `BAUD` 变量需按项目设置。未知设备用「波特率探测」逐一尝试
 5. **持久 shell 优势**：串口 shell 是持久会话，后台进程不随退出被杀——适合启动需要持续运行的守护进程（ADB shell 做不到这点）
 6. **pyserial 端口参数污染**：上一个串口 session 遗留的参数设置会导致 pyserial 能写但读不到数据（`ser.read()` 返回空）。打开串口前必须用 `stty` 重置端口参数：`sudo stty -F /dev/ttyUSB0 115200 cs8 -cstopb -parenb raw -echo -echoe -echok`。然后 pyserial 初始化才有正确数据返回
 7. **后台串口捕获验证（log 文件 0 字节排查协议）**：启动后台串口捕获（picocom、screen 或 Python 脚本）后，5 秒内验证文件增长。若 `wc -l /tmp/logfile` 持续为 0，按序排查：`fuser /dev/ttyUSB0` 检查是否有残留进程占用端口 → `kill -9 <pid>` 释放 → 等待 1s → `fuser` 确认端口空闲 → `stty -F /dev/ttyUSB0 <baud> cs8 -cstopb -parenb raw -echo` 重置参数 → 重新启动捕获。**不要等捕获结束才发现文件是空的。** 常见残留进程来源：前序失败的 picocom session、残留的 `cat /dev/ttyUSB0` 进程、未正确销毁的 screen session。
@@ -917,7 +917,7 @@ for _ in range(3):
 ser.write(b'\r\n')
 time.sleep(1)
 out = ser.read(500).decode(errors='replace').lower()
-if any(p in out for p in ['prj009#', '<项目>#', '=>']):
+if any(p in out for p in ['<U-Boot提示符>#', '<项目>#', '=>']):
     print("Mode: U-Boot")
 elif any(p in out for p in ['login:', 'root@', '# ']):
     print("Mode: Linux")
@@ -1099,14 +1099,77 @@ python3 scripts/capture_boot_log.py --poweron <baud> <duration_sec>  # 模式2
 
 ## 相关技能
 
-- `ingenic-adb-setup` — Ingenic 平台专用：盲打登录 → 查 DHCP IP → ADB 连接（不设静态 IP，不手动启 adbd）
-- `ingenic-basic-tftp-flash` — TFTP 烧录 + switch_mode debug（烧录后首次启动全流程）
-- `adb-dev-push` — ADB 推送 + 调试嵌入式设备二进制
-- `ingenic-adb-setup` — Ingenic 平台专用：盲打登录 → 查 DHCP IP → ADB 连接
-- `bench-device-performance` — 设备性能标定（Flash/CPU/内存负载采集）
+- `ingenic-basic-tftp-flash` — TFTP 烧录（串口通道，U-Boot 打断，同仓库技能）
 
 ## 项目特定
 
 各项目串口参数（波特率、用户名、密码）见 memory 或 `AGENTS.md §1`。
 
 网络配置（同网段 IP + 网关 + DNS）。
+
+## 故障诊断（决策树 + 故障速查）
+
+> 故障诊断章节。串口不通/乱码/日志洪流/命令截断/login 丢失的诊断流程。
+
+### 一、故障诊断决策树
+
+```
+串口不通？
+├─ 无任何输出
+│  ├─ 设备断电？ → 查电源灯/万用表
+│  ├─ 波特率不对？ → 乱码 → 探测波特率 [921600, 115200, 1500000, 57600, 9600]
+│  ├─ 串口线松动？ → 重插 /dev/ttyUSB0
+│  └─ pyserial 读不到？ → stty 重置端口参数
+├─ 有输出但命令不执行
+│  ├─ 未登录？ → 盲打 burst 登录
+│  └─ login 进程挂死？ → 看门狗复位或物理断电
+├─ 日志洪流淹没输出
+│  ├─ 文件重定向法 — `cmd > /tmp/_f; cat /tmp/_f`
+│  ├─ marker 包裹法 — `echo "START"; cmd; echo "END"`
+│  └─ 仍不行 → 切 ADB（stdout 不受日志影响）
+└─ 长命令被截断
+   ├─ 拆为 < 80 字符的短命令
+   └─ 写脚本到文件再执行
+```
+
+### 二、常见故障诊断
+
+**2.1 串口无数据**：`ser.read()` 持续返回空，但 `cat /dev/ttyUSB0` 能读 → pyserial 被残留 termios 污染 → `serial.Serial()` 前 stty 重置端口参数。
+
+**2.2 串口乱码**：全是不可读二进制 → 波特率不匹配 → 逐一探测 `[921600, 115200, 1500000, 57600, 9600]`，检查 printable ratio。
+
+**2.3 命令发送了但没执行**：写 `reboot\r` 后设备不重启 → 未登录，命令被 login 当作用户名 → **发任何命令前必须先登录并验证**（时间戳 echo 验证）。
+
+**2.4 日志洪流**：应用日志持续刷屏（~100 msg/s），命令输出被淹没 → 修复优先级：
+
+| 优先级 | 方法 | 适用场景 |
+|-------|------|---------|
+| 1 | **文件重定向** `cmd > /tmp/_f; cat /tmp/_f` | 任何日志密度 |
+| 2 | **marker 包裹** `echo "START_${ts}"; cmd; echo "END_${ts}"` | 中等密度 |
+| 3 | **切 ADB** | eth0 ADB 可用时首选 |
+| 4 | **杀日志进程** `killall apphilogcat` | 最终手段（会丢日志） |
+
+**2.5 长命令截断**：raw 模式下 > 80 字符被截断 → 拆为短命令或写脚本文件执行（`echo 'cmd1; cmd2' > /tmp/s; sh /tmp/s`）。
+
+**2.6 login 反复掉线**：登录成功几秒后又回 login 提示符 → 串口 idle timeout / getty 重启 → 每次重要命令前验证登录状态。
+
+### 三、故障速查（if-X-then-Y）
+
+| 症状 | 处理 |
+|------|------|
+| echo 验证不通过 | 盲打 burst：`root\r` + `\r`，50 轮，0.01s 间隔 → 时间戳 echo 验证 |
+| ser.read() 大量应用日志但无命令输出 | 文件重定向：`cmd > /tmp/_f 2>&1; cat /tmp/_f` |
+| 命令 > 80 字符 | 拆为多条短命令 / echo 写脚本文件再执行 |
+| 发 reboot 后 5s 还在输出应用日志 | 未登录！reboot 被 login 当用户名。重新登录→验证→再 reboot |
+| ser.read() 持续返回空但 cat 能读 | stty 重置端口参数后重新 serial.Serial() |
+
+### 四、反模式
+
+| 反模式 | 后果 | 正确做法 |
+|--------|------|---------|
+| 不验证登录就发 reboot | reboot 被 login 当作用户名吃掉 | 先 echo 验证登录 |
+| 用 `\n` 作行终止符 | 所有输入静默丢失 | 始终用 `\r` |
+| 长命令一条 send | 串口 raw 模式截断 | 拆为 < 80 字符或写文件 |
+| 反复读取后清空 buf | 累积数据丢失，看起来像零输出 | 持续追加到同一 buffer |
+| 日志洪流中 try `cat /dev/ttyUSB0` | 输出完全不可解析 | 用 pyserial + 文件重定向法 |
+| `adb push` 到旧 IP 假设同设备 | push 到错误设备 | 串口确认当前 IP 再 connect |
