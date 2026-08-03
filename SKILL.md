@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式设备串口交互与 TFTP 刷机 — 环境预检、串口连接、模式判断、配网烧录、完成验证
-version: 1.4.0
+version: 1.5.0
 category: devops
 metadata:
   hermes:
@@ -94,7 +94,7 @@ Step 2: 模式判断
 
 Step 3: 配网 + 烧录
   ├─ setenv ipaddr/netmask/gatewayip/serverip
-  ├─ IP 冲突预检：ping 设备自身 IP，通 = 被占用 → 换 IP（IP 冲突是 TFTP T T T T 首要原因）
+  ├─ IP 冲突预检：ping 设备自身 IP，通 = 被占用 → 换 IP（根因见 `references/troubleshooting.md`）
   ├─ ping 验证连通性（可选）
   └─ mai_tftp → 监控擦写输出
 
@@ -103,10 +103,7 @@ Step 4: 等待重启
   ├─ Kernel panic → 烧录失败
   └─ 超时 ≠ 失败（等 60-90s 再判断）
 
-失败恢复速查：
-  ├─ 卡 mai_tftp 重试循环（Loading: T T 反复）→ 等静默 ≥1.5s 窗口连发 Ctrl+C，回提示符后重跑
-  ├─ TFTP 持续 T T T T → 先查 IP 冲突（ip neigh show | grep <IP>），占用则换空闲 IP
-  └─ 打断失败 → 敲回车看状态：<名字># → --at-uboot / login: → 等启动完 / 无响应 → 断电
+失败处理 → 见 `references/troubleshooting.md`（排障参考，按需查）
 ```
 
 ---
@@ -205,18 +202,6 @@ config reset             # 清除全部
 
 ---
 
-## 失败恢复
-
-```
-Step 0 失败 → 按提示修复（restart tftpd-hpa / 设 IP / 检查目录）
-Step 1 无响应 → 物理断电 / 检查串口线
-Step 2 打断失败 → 敲回车看状态：U-Boot# → --at-uboot / login → 重跑 / 无响应 → 断电
-Step 3 TFTP 超时 → 检查网线/IP/目录 → --at-uboot 重试
-Step 4 超时 → 等 60-90s，不要重烧
-```
-
----
-
 ## 项目配置表
 
 | 项目 | TFTP 目录 | 设备 IP | 擦除范围 | 波特率 |
@@ -269,21 +254,9 @@ mai_tftp
 
 ---
 
-## 反模式
-
-| 反模式 | 正确做法 |
-|--------|---------|
-| 没确认 U-Boot 就发 mai_tftp | 确认提示符再发 |
-| 跨项目套擦除范围 | 先确认项目 |
-| exit 1 就重烧 | 等 60-90s 确认 |
-| 先讲步骤再跑脚本 | 直接跑脚本 |
-| 烧完 adb connect 旧 IP | 串口查新 IP |
-| 用 `\n` 作行终止符 | 用 `\r` |
-
----
-
 ## 参考资料
 
+- `references/troubleshooting.md` — 烧录排障（失败恢复速查、各步骤失败处理、反模式）
 - `references/serial-console-notes.md` — 串口交互经验（登录策略、故障诊断、陷阱汇总）
 
 ## 适用平台

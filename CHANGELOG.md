@@ -2,6 +2,13 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 1.5.0 (2026-08-03)
+
+### Changed（参考分层 A 模式对齐）
+- **坑内容从 SKILL.md 移入 `references/troubleshooting.md`**：失败恢复速查 / 各步骤失败处理 / 反模式表 / IP 冲突根因——SKILL.md 只留干净主流程，坑按需查阅（参考分层定稿，见 hermes-skill-gen v1.3.0）
+- SKILL.md 五步图失败处理改一行导航（指向 troubleshooting.md）；IP 冲突预检括号原因移除（根因归 references）
+- 版本 1.4.0 → 1.5.0
+
 ## 1.4.0 (2026-08-01)
 
 ### Fixed（HM6502 真机实践复盘，三轮 LOOP 优化）
