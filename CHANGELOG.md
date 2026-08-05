@@ -2,6 +2,14 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 1.6.0 (2026-08-05)
+
+### Added（烧录参考资料并入，2026-08-05 skill 审计）
+- **14 个烧录参考资料从 ingenic-basic-tftp-flash 并入** `references/`：post-flash-md5-verification（烧录后 MD5 三方对齐铁律）、hm6502-full-erase-flash（全擦实录）、hm6502-partial-erase-flash-at-uboot-recovery（部分擦除+U-Boot 恢复）、hm6502-flash-timing-zb25vq128（timing 与 ZB25VQ128 变体）、tftp-flash-baud-uboot-recovery（波特率+打断恢复）、20260717-shell-timeout-recovery、bricked-nor-recovery（变砖恢复）、nor-all-bin-layout-recovery、flash-network-diagnosis-anti-pattern、flash-verify-boot-changes、flashing-concurrent-prevention、build-output-staleness-verification、post-flash-wifi-reconnect、skill-failure-handling
+- SKILL.md 参考资料段同步列出全部 16 个 references
+- 无关调试类资料（i2c/mjac/isp 等 12 个）转存 qwiki 项目知识库
+- 版本 1.5.0 → 1.6.0
+
 ## 1.5.0 (2026-08-03)
 
 ### Changed（参考分层 A 模式对齐）
@@ -45,7 +53,7 @@
 
 ### Added
 - 初始发布：serial-tftp 单技能（串口交互 + TFTP 刷机五步流程）
-- 由 serial-dev-console + ingenic-basic-tftp-flash 两技能收敛合并（消除重叠）
+- 由 serial-debug + serial-tftp 两技能收敛合并（消除重叠）
 - 顶部新增「AI 替你完成」使用哲学头节 + AI 交互约定（agent 走参数路径，不用管道喂 stdin）
 - setup 交互式参数设定向导：逐项输入+校验，回车接受默认值，q 取消，取消零副作用
 - flash 预检失败自动引导：参数缺失 → 询问是否进入交互设定（isatty 分界）

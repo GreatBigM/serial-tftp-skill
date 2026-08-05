@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式设备串口交互与 TFTP 刷机 — 环境预检、串口连接、模式判断、配网烧录、完成验证
-version: 1.5.0
+version: 1.6.0
 category: devops
 metadata:
   hermes:
@@ -258,6 +258,22 @@ mai_tftp
 
 - `references/troubleshooting.md` — 烧录排障（失败恢复速查、各步骤失败处理、反模式）
 - `references/serial-console-notes.md` — 串口交互经验（登录策略、故障诊断、陷阱汇总）
+- `references/post-flash-md5-verification.md` — 烧录后 MD5 三方对齐验证（铁律）
+- `references/hm6502-full-erase-flash-20260717.md` — 全擦烧录实录
+- `references/hm6502-partial-erase-flash-at-uboot-recovery-20260717.md` — 部分擦除 + U-Boot 恢复
+- `references/hm6502-flash-timing-zb25vq128.md` — 烧录 timing & ZB25VQ128 变体
+- `references/tftp-flash-baud-uboot-recovery.md` — 波特率 & U-Boot 打断恢复
+- `references/20260717-shell-timeout-recovery.md` — shell 超时 --at-uboot 恢复
+- `references/bricked-nor-recovery.md` — 变砖恢复（NOR 损坏）
+- `references/nor-all-bin-layout-recovery.md` — NOR_ALL.bin 布局恢复与备选 Slot
+- `references/flash-network-diagnosis-anti-pattern-20260722.md` — 烧录网络诊断反模式
+- `references/flash-verify-boot-changes.md` — 烧录后 boot 序列变更验证
+- `references/flashing-concurrent-prevention.md` — 烧录并发冲突预防
+- `references/build-output-staleness-verification.md` — 构建产物一致性验证
+- `references/post-flash-wifi-reconnect.md` — 烧录后 WiFi 重连
+- `references/skill-failure-handling.md` — 技能失败处理原则
+
+> 以上烧录类参考资料 2026-08-05 并入（原 ingenic-basic-tftp-flash 技能）。
 
 ## 适用平台
 
