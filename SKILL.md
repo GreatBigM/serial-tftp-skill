@@ -1,6 +1,6 @@
 ---
 name: serial-tftp
-description: 嵌入式设备串口交互与 TFTP 刷机 — 环境预检、串口连接、模式判断、配网烧录、完成验证
+description: 嵌入式串口交互与 TFTP 刷机：环境预检、模式判断、配网烧录、完成验证一站式。
 version: 1.6.0
 category: devops
 metadata:
