@@ -2,6 +2,12 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 1.7.0 (2026-08-18)
+
+### Added
+
+- **ZCode 安装目标**：`install.sh` 支持 ZCode（探测 `~/.zcode` → 安装到 `~/.zcode/skills/serial-tftp`，CLI 入口 `serial-tftp` 同步链到 `~/.local/bin/`），README 补 `--target zcode` 示例，发布页一键命令即可装到 ZCode
+
 ## 1.6.0 (2026-08-05)
 
 ### Added（烧录参考资料并入，2026-08-05 skill 审计）

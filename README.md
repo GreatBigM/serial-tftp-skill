@@ -10,14 +10,14 @@
 
 ## 安装
 
-本 skill 支持多 agent 目标：Hermes / Claude Code / Codex。安装脚本自动探测本机已安装的 agent，让用户选择安装目标。
+本 skill 支持多 agent 目标：Hermes / Claude Code / Codex / ZCode。安装脚本自动探测本机已安装的 agent，让用户选择安装目标。
 
 ```bash
 # 方式 1：交互选择安装目标（推荐，先下载再执行以保留交互）
 curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh
 
-# 方式 2：指定目标（非交互）
-curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | bash -s -- --target hermes,claude
+# 方式 2：指定目标（非交互，含 ZCode）
+curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | bash -s -- --target hermes,claude,zcode
 
 # 方式 3：安装到全部检测到的 agent
 curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | bash -s -- --all
