@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互与 TFTP 刷机：环境预检、模式判断、配网烧录、完成验证一站式。
-version: 1.7.0
+version: 1.8.0
 category: devops
 metadata:
   agent:

@@ -30,20 +30,22 @@ curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | b
 
 **本技能的使用方式是：用户指挥 AI，AI 替用户执行。** 用户说"配置烧录参数/烧录/刷机"，AI 读技能参数说明、对话层询问缺失参数、写入缓存并直接执行，用户不面对命令行。
 
-无 AI 时可在终端直连：
+无 AI 时可在终端直连（安装脚本已建统一命令入口 `serial-tftp` → `~/.local/bin/`）：
 
 ```bash
 # 方式 A（推荐）：交互式向导，逐项输入，回车接受默认值
-python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py setup
+serial-tftp setup
 
 # 方式 B：命令行直设（适合脚本化/已知参数）
-python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config ipaddr <设备IP>
-python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config serverip <主机IP>
-python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py config tftp-dir <TFTP目录>
+serial-tftp config ipaddr <设备IP>
+serial-tftp config serverip <主机IP>
+serial-tftp config tftp-dir <TFTP目录>
 
 # 一键烧录
-python3 ~/.hermes/skills/serial-tftp/scripts/auto-uboot-interrupt.py flash
+serial-tftp flash
 ```
+
+> 若未建命令入口（手动复制安装），可直接调脚本：`python3 <skill目录>/scripts/auto-uboot-interrupt.py setup`（skill 目录随安装位置而定：`~/.hermes/skills/`、`~/.claude/skills/`、`~/.zcode/skills/` 等）。
 
 参数自动缓存到 ~/.config/serial-tftp/config.json，后续烧录免输入。
 

@@ -2,6 +2,13 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 1.8.0 (2026-08-18)
+
+### Changed（审查修复）
+
+- **终端直连命令改为统一 CLI 入口**：README 无 AI 终端示例从 `python3 ~/.hermes/skills/serial-tftp/scripts/...` 改为 `serial-tftp setup/config/flash`（安装脚本自动建 `~/.local/bin/serial-tftp` 链接，去掉对 Hermes 安装路径的硬编码；手动复制安装的兜底说明同步）
+- 版本 1.7.0 → 1.8.0
+
 ## 1.7.0 (2026-08-18)
 
 ### Added
