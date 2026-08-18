@@ -4,7 +4,7 @@ description: 嵌入式串口交互与 TFTP 刷机：环境预检、模式判断�
 version: 1.7.0
 category: devops
 metadata:
-  hermes:
+  agent:
     triggers: [tftp, 刷机, 烧录, mai_tftp, tftpboot, auto_update_tftp, 串口, serial, ttyUSB, uboot, 串口登录]
 ---
 
