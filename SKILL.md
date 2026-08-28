@@ -1,11 +1,12 @@
 ---
 name: serial-tftp
-description: 嵌入式串口交互与 TFTP 刷机：环境预检、模式判断、配网烧录、完成验证一站式。
-version: 1.8.0
+description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
+version: 1.9.1
 category: devops
 metadata:
   agent:
-    triggers: [tftp, 刷机, 烧录, mai_tftp, tftpboot, auto_update_tftp, 串口, serial, ttyUSB, uboot, 串口登录]
+    tags: [serial, uart, ttyUSB, tftp, 刷机, 烧录, 串口, 调试]
+    triggers: [tftp, 刷机, 烧录, mai_tftp, tftpboot, auto_update_tftp, 串口, serial, ttyUSB, uboot, 串口登录, 盲打登录, 波特率, 串口无数据, 串口乱码]
 ---
 
 ## ⚡ 快速开始（AI 替你完成）
@@ -239,6 +240,76 @@ reset
 
 ---
 
+## 串口调试（非烧录场景，并入自 serial-debug）
+
+烧录之外的串口日常：登录、命令执行、查状态、设 IP、启 adbd、故障排查。ADB 不可用时的首选通道。
+
+### 铁律：第一步永远是发 CR 判断模式
+
+盲打发 3 次 CR（`\r`，0x0d）观察回显，**不假设设备状态**：
+
+| 回显 | 当前模式 | 下一步 |
+|------|---------|--------|
+| `U-Boot>` / `Hit any key` | U-Boot | 烧录/打断启动（见上文） |
+| `login:` | 未登录 | 走「登录」 |
+| shell 提示符（`#`/`~#`） | 已登录 | 直接发命令，**不要发 root**（会被当命令执行） |
+| 无回显/乱码/噪声 | 波特率错或 TX 不通 | 走「故障速查」 |
+
+### 连接建立
+
+1. 串口设备 `/dev/ttyUSB0`，权限 `sudo chmod 666 /dev/ttyUSB0`
+2. 波特率项目相关：逐一尝试 [921600, 115200, 1500000, 57600]。波特率错 → 全是二进制乱码
+3. 第一件事确认双向（TX 通）——发唯一标记看回显，TX 不通则串口方案不可行
+4. 先 reset 串口参数再读写：`sudo stty -F /dev/ttyUSB0 <BAUD> cs8 -cstopb -parenb raw -echo -echoe -echok`
+5. 行终止符用 `\r`（CR），**LF 被 getty 忽略，输入静默丢失**
+
+### 盲打登录
+
+用户 `root`，密码为空（直接回车）。设备日志可能持续淹没提示符，登录前先 drain。
+
+```python
+import serial, time
+BAUD = 921600   # 项目相关：常见 921600 / 115200
+ser = serial.Serial('/dev/ttyUSB0', BAUD, timeout=0.5)
+time.sleep(0.3); ser.reset_input_buffer()
+ser.write(b'\r\n'); time.sleep(1.5)   # 唤醒
+ser.read(ser.in_waiting)              # drain noise
+ser.write(b'root\r'); time.sleep(0.5)
+ser.write(b'\r'); time.sleep(0.5)      # 密码为空：直接回车
+data = ser.read(4096)
+print(data.decode('utf-8', errors='replace'))
+ser.close()
+```
+
+### 命令执行模式
+
+| 场景 | 方式 |
+|------|------|
+| 简单命令 | 直接发 + 读响应 |
+| 需要输出过滤 | 轻量级单命令（后台读 + echo `\r`） |
+| 复杂/多步 | 脚本隔离法（写脚本执行，防截断） |
+| 长任务 | 后台执行（`&`），SIGHUP 不杀 |
+
+### 常见操作
+
+- 设 IP：`ifconfig eth0 <IP> netmask 255.255.255.0 up`（设完确认 ifconfig 回显）
+- 启 adbd：`adbd &`（先查是否已跑 `ps|grep adbd`）
+- 杀进程：`ps|grep <name>|grep -v grep` 拿 PID → `kill -9 <pid>`
+- 查状态：`ps`、`ifconfig`、`route`、`cat /proc/meminfo`（日志洪流时用 grep 过滤）
+
+### 故障速查
+
+| 症状 | 原因 | 处理 |
+|------|------|------|
+| 串口无数据 | 权限/驱动/波特率 | 见 references/serial-debug-diagnostics.md |
+| 全乱码 | 波特率错 | 换 [921600, 115200, 1500000, 57600] 逐一试 |
+| 命令发了没执行 | LF 行终止符 | 改用 `\r`（CR） |
+| 日志洪流淹没 | 设备日志持续刷 | 登录前 drain，命令输出用 grep 过滤 |
+| 长命令截断 | 终端缓冲限制 | 脚本隔离法 |
+| login 反复掉线 | getty 竞争/噪声 | 见 references/serial-debug-diagnostics.md |
+
+---
+
 ## 手动刷机（备选）
 
 ```bash
@@ -257,6 +328,9 @@ mai_tftp
 ## 参考资料
 
 - `references/troubleshooting.md` — 烧录排障（失败恢复速查、各步骤失败处理、反模式）
+- `references/serial-debug-diagnostics.md` — 串口连接诊断（权限/驱动/波特率/getty 竞争）
+- `references/command-execution-patterns.md` — 命令执行模式（单命令/脚本隔离/后台任务）
+- `references/ingenic-serial-boot-login.md` — 盲打登录细节
 - `references/serial-console-notes.md` — 串口交互经验（登录策略、故障诊断、陷阱汇总）
 - `references/post-flash-md5-verification.md` — 烧录后 MD5 三方对齐验证（铁律）
 - `references/hm6502-full-erase-flash-20260717.md` — 全擦烧录实录

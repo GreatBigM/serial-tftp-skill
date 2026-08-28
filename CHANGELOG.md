@@ -73,3 +73,19 @@
 - 脱敏：prj009# → <项目>#，进程名加"按设备调整"说明
 - scripts: auto-uboot-interrupt.py / flash_config.py / serial_cmd.py / capture_boot_log.py / reboot_capture.py / reboot-stress.py
 - references/serial-console-notes.md 串口交互经验
+
+## 1.9.0 (2026-08-28)
+
+### Added（并入 serial-debug）
+
+- 新增「串口调试（非烧录场景）」章节：发 CR 判模式铁律、盲打登录、命令执行模式、常见操作、故障速查
+- 并入 serial-debug 的脚本 `serial_login_ip.py` 与 19 个串口调试 references
+- description 更新为「串口交互 + TFTP 刷机一站式」；triggers 补串口调试/盲打登录/波特率等
+- 版本 1.8.0 → 1.9.0
+
+## 1.9.1 (2026-08-28)
+
+### Added
+
+- install.sh 新增 pi 安装目标（探测 `~/.pi/agent` → 安装到 `~/.pi/agent/skills/<skill>`，pi 自动发现）
+- 版本 1.9.0 → 1.9.1
