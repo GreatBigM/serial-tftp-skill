@@ -2,7 +2,14 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
-## 1.8.0 (2026-08-18)
+## 2.0.0 (2026-08-29)
+
+### Changed（定位调整：skill 归属于 agent，无人通道）
+
+- **移除全局命令入口**：install.sh 不再 `ln -sf` 到 `~/.local/bin/serial-tftp`；不再注册 PATH
+- **SKILL.md「终端直连 / 便捷入口」章节改为「脚本入口（skill 目录内，不全局注册）」**：所有调用都走 `<skill_dir>/scripts/`，agent 专属
+- **wrapper 脚本定位更新**：`scripts/serial-tftp` 保留在 skill 目录内作为 agent 可选统一入口，用法改为 `<skill_dir>/scripts/serial-tftp ...`
+- 版本 1.9.1 → 2.0.0
 
 ### Changed（审查修复）
 

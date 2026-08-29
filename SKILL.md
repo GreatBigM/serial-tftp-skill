@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 1.9.1
+version: 2.0.0
 category: devops
 metadata:
   agent:
@@ -27,50 +27,35 @@ AI:  执行烧录流程（按本文件流程铁律）→ 回报结果
 > **模板定位（agent 必读）**：
 > - `scripts/` 下的脚本是**伪代码参考**：展示烧录流程长什么样、有哪些坑（如 `\r` 行终止、日志洪流、U-Boot 打断时机）
 > - **约束的是流程行为，不是代码细节**——AI 执行时行为必须符合本文件流程铁律（五步顺序/先查后动/`\r` 不 `\n`/烧录后验证/失败不重烧），具体实现方式不限
-> - 有 `serial-tftp` 命令可直接用（省事、含版本门卫）；没有或环境不适配时，AI 按流程自行实现等价操作也符合本技能
+> - 脚本在 `<skill_dir>/scripts/` 内，agent 按需调用（见「脚本入口」章节）；无全局命令、无 PATH 注册
 > - 预检失败分两类：参数缺失（AI 问齐再补） vs 环境问题（TFTP 服务/目录/固件——提示用户修复）
 > - 烧录完成回报：新 IP（串口 ifconfig eth0 查）、启动状态、剩余验证项
 
-## 便捷入口（可选）
+## 脚本入口（skill 目录内，不全局注册）
 
-有 `serial-tftp` 命令时可直接调用（省事，含版本门卫）；没有时 AI 按流程自行实现等价操作：
-
-```bash
-serial-tftp flash                 # 一键烧录（主命令）
-serial-tftp flash --at-uboot      # 设备已在 U-Boot
-serial-tftp setup                 # 交互式参数设定（终端直连）
-serial-tftp config show           # 查看配置缓存
-serial-tftp cmd 'ifconfig eth0'   # 串口发单条命令
-serial-tftp capture               # 启动日志采集
-serial-tftp reboot-capture        # 循环重启采集
-serial-tftp stress --count 20     # 重启压力测试
-serial-tftp shell                 # 交互式 U-Boot shell
-```
-
-## 终端直连（无 AI 时的备选）
-
-用户自己跑脚本的场景（脚本化 / 无 agent 环境）：
+本技能的所有脚本都在 `<skill_dir>/scripts/` 内，由 agent 按需调用（`<skill_dir>` = 本 SKILL.md 所在目录）。不提供全局命令、不注册 PATH 入口，完全归属于 agent：
 
 ```bash
-# 方式 A（交互式向导）：逐项输入，回车接受默认值，q 取消
-python3 <skill_dir>/scripts/auto-uboot-interrupt.py setup
+# 统一入口 wrapper（skill 目录内，agent 可选调用）
+python3 <skill_dir>/scripts/serial-tftp flash            # 一键烧录（主命令）
+python3 <skill_dir>/scripts/serial-tftp flash --at-uboot # 设备已在 U-Boot
+python3 <skill_dir>/scripts/serial-tftp setup            # 交互式参数设定
+python3 <skill_dir>/scripts/serial-tftp config show      # 查看配置缓存
+python3 <skill_dir>/scripts/serial-tftp cmd 'ifconfig eth0'  # 串口发单条命令
+python3 <skill_dir>/scripts/serial-tftp capture          # 启动日志采集
+python3 <skill_dir>/scripts/serial-tftp reboot-capture   # 循环重启采集
+python3 <skill_dir>/scripts/serial-tftp stress --count 20    # 重启压力测试
+python3 <skill_dir>/scripts/serial-tftp shell            # 交互式 U-Boot shell
 
-# 方式 B（命令行直设）：适合已知参数
+# 或直接调用原语脚本（等价）
+python3 <skill_dir>/scripts/auto-uboot-interrupt.py setup              # 交互式向导
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config ipaddr <DEV_IP>
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config serverip <HOST_IP>
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py config tftp-dir <TFTP_DIR>
-
-# 一键烧录
-python3 <skill_dir>/scripts/auto-uboot-interrupt.py flash
-
-# 设备已在 U-Boot
-python3 <skill_dir>/scripts/auto-uboot-interrupt.py flash --at-uboot
-
-# 串口发命令
-python3 <skill_dir>/scripts/serial_cmd.py 'ifconfig eth0'
-
-# 查看/管理配置
-python3 <skill_dir>/scripts/auto-uboot-interrupt.py config show
+python3 <skill_dir>/scripts/auto-uboot-interrupt.py flash              # 一键烧录
+python3 <skill_dir>/scripts/auto-uboot-interrupt.py flash --at-uboot   # 设备已在 U-Boot
+python3 <skill_dir>/scripts/serial_cmd.py 'ifconfig eth0'             # 串口发命令
+python3 <skill_dir>/scripts/auto-uboot-interrupt.py config show       # 查看配置
 ```
 
 ---

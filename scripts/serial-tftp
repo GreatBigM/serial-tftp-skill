@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# serial-tftp 统一命令入口（版本门卫 + 子命令分派）
+# serial-tftp 脚本统一入口（skill 目录内，agent 专用；不注册全局命令/PATH）
 #
 # 设计目的:
 #   1. 版本门卫: 所有脚本是 Python 3 语法, py2 直接解析会 SyntaxError 崩溃
 #      本 wrapper 在 Python 解析之前检查 python3 是否存在, 给出友好提示
 #   2. 统一入口: 一个命令覆盖全部功能, 不用记 6 个 python 脚本名
 #
-# 用法:
-#   serial-tftp flash                 # 一键烧录（AI/终端直连均可）
-#   serial-tftp flash --at-uboot      # 设备已在 U-Boot
-#   serial-tftp setup                 # 交互式参数设定
-#   serial-tftp config show           # 查看配置
-#   serial-tftp cmd 'ifconfig eth0'   # 串口发命令
-#   serial-tftp capture [baud] [sec]  # 启动日志采集
-#   serial-tftp reboot-capture        # 循环重启采集
+# 用法（agent 调用，<skill_dir>/scripts/serial-tftp）：
+#   <skill_dir>/scripts/serial-tftp flash              # 一键烧录
+#   <skill_dir>/scripts/serial-tftp flash --at-uboot   # 设备已在 U-Boot
+#   <skill_dir>/scripts/serial-tftp setup              # 交互式参数设定
+#   <skill_dir>/scripts/serial-tftp config show        # 查看配置
+#   <skill_dir>/scripts/serial-tftp cmd 'ifconfig eth0'  # 串口发命令
+#   <skill_dir>/scripts/serial-tftp capture [baud] [sec]  # 启动日志采集
+#   <skill_dir>/scripts/serial-tftp reboot-capture     # 循环重启采集
 #   serial-tftp stress --count 20     # 重启压力测试
 #   serial-tftp shell                 # 交互式 U-Boot shell
 set -euo pipefail
