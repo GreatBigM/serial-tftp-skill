@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.0
+version: 2.0.1
 category: devops
 metadata:
   agent:
@@ -247,6 +247,9 @@ reset
 3. 第一件事确认双向（TX 通）——发唯一标记看回显，TX 不通则串口方案不可行
 4. 先 reset 串口参数再读写：`sudo stty -F /dev/ttyUSB0 <BAUD> cs8 -cstopb -parenb raw -echo -echoe -echok`
 5. 行终止符用 `\r`（CR），**LF 被 getty 忽略，输入静默丢失**
+6. 设备 shell **吃掉一层反斜杠** ⇒ echo 写文件/传参的转义必须**双写**：换行 `\\n`、引号 `\\42`、空格 `\\040`、tab `\\011`。单写会静默写出错内容（命令不报错）⇒ 写完必须 md5sum 比对。**不只 `\n` 要双写**——2026-09-17 按「只 \n」理解写了一版，实机全错
+7. 双引号会被设备 shell 吞掉 ⇒ 主机侧卡在 `> ` 续行（脱出：依次发 `'`、`"`，或 Ctrl+D）；busybox `base64 -d` 可能静默产出 0 字节文件，别用它传文件
+8. **busybox ash 不展开重定向目标里的 glob**：`echo 822 > $G/*/fixed_rate_idx` 报 `nonexistent directory`，**错误信息里带未展开的星号**（识别特征，看到星号就是没展开，别查权限/挂载）；同一变量在 `for` 里却能展开（POSIX：重定向的词不做路径名展开，bash 宽容、ash 不宽容）⇒ 先 `for f in $G/*/f; do … > "$f"; done`。配套设备侧常识：常无 `head`/`tail`（末尾 N 行用 `awk '{a[NR]=$0} END{for(i=…)}'`）、无 `iw`/`iwpriv`、**debugfs 不自动挂**（`mount -t debugfs none /sys/kernel/debug`）且重载后 phy 号会变 ⇒ 路径一律写 glob（`phy*/rwnx/rc/*/stats`），写死 phy 号会静默读到空。明细 → qwiki `hm6502_wifi/20260922-device-shell-and-rcstats-pitfalls.md`
 
 ### 盲打登录
 
@@ -292,6 +295,33 @@ ser.close()
 | 日志洪流淹没 | 设备日志持续刷 | 登录前 drain，命令输出用 grep 过滤 |
 | 长命令截断 | 终端缓冲限制 | 脚本隔离法 |
 | login 反复掉线 | getty 竞争/噪声 | 见 references/serial-debug-diagnostics.md |
+
+---
+
+## ⛔ 烧录门禁与高频坑（2026-09-11 沉淀，烧前必读）
+
+> 完整账（含代价与分区类坑）：qwiki `hm6502_wifi/20260911-flash-partition-pitfalls-avoidance.md`
+> 同步说明：本 skill 与 `~/.pi/agent/skills/serial-tftp/` 同源双份，改动须**双写**（2026-09-12 由反思 cron 补齐门禁段与 scripts 硬化）
+
+**烧前 8 条门禁（缺一不烧）**
+1. 产物新鲜：`system_b.img`/`NOR_ALL`/FIT 时间戳 ≥ `.ko` 时间戳
+2. `.ko` 一致性用 **.text/.data 比对**（md5 因 strip 必不同）
+3. `auto_update_tftp.txt` 必须是**全量版**：`tftpboot <proj>_NOR_ALL.bin` + `sf erase 0x0 0xF70000`（范围与 `partition_layout/partitions.conf` 一致）
+4. TFTP server 在跑且 `TFTP_DIRECTORY` = 产物目录（删 `out/` 后必须重启 server）
+5. 本地自检：`curl -s tftp://127.0.0.1/<proj>_NOR_ALL.bin -o /dev/null -w '%{size_download}'` = 16777216
+6. **串口单进程**：`fuser -v /dev/ttyUSB0` 为空（禁止后台+前台并发，会 `multiple access on port` 且输入错乱）
+7. U-Boot env **四件套**并 `printenv` 核对：
+   `setenv ipaddr 172.17.150.200; setenv netmask 255.255.255.0; setenv gatewayip 172.17.150.1; setenv serverip 172.17.151.6; mai_tftp`
+8. 烧后反证：U-Boot 打印的 kernel/system 地址大小与布局一致；启动后 `/proc/version` 时间戳 + 新参数存在（防"烧了旧镜像"）
+
+**高频坑**
+- 只设 `ipaddr/serverip` → env 残留 `gatewayip=192.168.2.1` → `sending through gateway 192.168.2.1` + `T T T`（serverip 与设备不同网段）
+- `mai_tftp` 无参走 CPSPR 解码 IP；CPSPR 空 → 兜底 10.3.2.4 → fetch 失败却像成功（**假阳性**）；脚本已改显式 `mai_tftp auto_update_tftp.txt` + 失败标记判负（`Retry count exceeded`/`Abort`/`No ethernet found`/`T T T`）+ 成功须见 `bytes written`
+- **CPSPR 触发在本机 U-Boot 不可靠**（解锁→写→锁定→reboot 仍正常引导）；主路径 = 断电冷启动 + 上电瞬间连打 CR 抢 U-Boot
+- GMAC 只由 `mai_tftp` 初始化：先单独 `ping`/`tftpboot` 会 `No ethernet found`
+- 温重启挂死（负载态）会截断"reboot → 抢 U-Boot"路径 → 必须断电冷启动
+- **非 shell 状态禁止盲发命令**：login 提示符下命令会被当用户名（一串 `Login incorrect`），先发 CR 判模式
+- `pkill -f <name>` 会匹配自身命令行导致自杀；用 `pkill -f "[a]utoboot"` 或 `setsid`
 
 ---
 
