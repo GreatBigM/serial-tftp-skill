@@ -263,23 +263,61 @@ def set_network(ser, ipaddr, netmask, gateway, serverip):
     return True
 
 
+def uboot_cmd(ser, cmd, timeout=10.0, settle=0.3):
+    r"""在 U-Boot 提示符下发一条命令并读回输出（读到提示符 `#` 或超时）。
+
+    ⚠ 本函数存在的理由是一个踩过的真 bug（2026-09-17 现场 → 2026-09-24 定位）：
+    IP 冲突预检原先写的是 ``ser.write(f"ping {ipaddr}\\r".encode())`` ——
+    源码里两个反斜杠 + r（`\\r`）经 f-string 求值后是**反斜杠和 r 两个可打印
+    字符**，不是回车 0x0D。U-Boot 的 hush 只在收到 CR 时才把整行交给解析器，
+    于是那串文本一直躺在控制台输入缓冲里等下一个真 CR，被一起结清，现场表现：
+
+        PRJ009# ping 172.17.151.118\rping 172.17.151.118\rping 172.17.151.6
+
+    即「预检从未真的 ping 过（静默失效）」+「残渣被下一条命令吃掉」。
+
+    ⇒ 纪律：**任何写 U-Boot 的地方都走本函数**（真正的 `\r` 只在这里拼），并且
+    ① 写前清输入缓冲（不让上一条的残渣污染这一条）
+    ② 读回以提示符为界，而不是固定 sleep 猜时长
+
+    超时说明：ping 无回应时 U-Boot 会 ARP 重试约 25s；调用方只关心「有没有回应」，
+    所以给 10s 上限即可（超时 = 无回应），残留输出由下一次调用的
+    `reset_input_buffer()` 丢弃。
+    """
+    ser.reset_input_buffer()
+    ser.write((cmd + "\r").encode())
+    t0 = time.time()
+    buf = b""
+    while time.time() - t0 < timeout:
+        time.sleep(settle)
+        if ser.in_waiting:
+            buf += ser.read(ser.in_waiting)
+            if re.search(rb"#\s*$", buf):   # 末行已是 U-Boot 提示符 = 命令返回了
+                break
+    return buf.decode(errors="replace")
+
+
 def check_ip_conflict(ser, ipaddr, retries=1):
     """IP 冲突预检：ping 设备自身 IP，通 = 被其他设备占用。
 
     U-Boot 的 ping 发 ARP 广播，若自身 IP 已被局域网设备占用，
     会收到 ARP 回应 → 提示冲突。ping 失败 = 无占用 = 可用。
     返回 True=空闲可用，False=冲突。
+
+    `retries=1` ⇒ 最多 **2** 次尝试（保持原语义，只是写明）。
+    判据只用 U-Boot 的成功行 `is alive`：失败行是 `ping failed; host X is not alive`，
+    不含 `is alive` 子串，不会误判。
     """
     print(f"[*] Checking IP conflict: ping {ipaddr} ...")
     for i in range(retries + 1):
-        ser.write(f"ping {ipaddr}\\r".encode())
-        time.sleep(3)
-        out = drain(ser).decode(errors="replace").lower()
-        if "alive" in out or "bytes" in out or "received" in out:
+        out = uboot_cmd(ser, f"ping {ipaddr}")
+        low = out.lower()
+        if "is alive" in low or "bytes from" in low:
             print(f"[-] IP CONFLICT: {ipaddr} is already used by another device!")
             print("    U-Boot 能 ping 通自身 IP = 该 IP 已被局域网设备占用")
             print("    排查: 宿主机 `ip neigh show | grep <IP>` 看占用者")
             print("    换 IP 后重试: serial-tftp config ipaddr <新IP>")
+            print("    确认是误报可加 --no-ping 跳过含本预检在内的网络预检")
             return False
         if i < retries:
             time.sleep(2)
@@ -288,25 +326,18 @@ def check_ip_conflict(ser, ipaddr, retries=1):
 
 
 def ping_verify(ser, serverip, retries=2):
-    """U-Boot ping 验证网络连通性（可选）。"""
-    # 提取纯 IP（去掉可能的后缀）
-    ip = serverip.rstrip("0123456789") if serverip[-1].isdigit() and len(serverip) > 15 else serverip
-    # 简单取 serverip 本身
+    """U-Boot ping 验证网络连通性（可选）。成功判据 = U-Boot 的 `is alive` 行。"""
     ip = serverip
     print(f"[*] Ping {ip} ...")
-    ser.write(f"ping {ip}\r".encode())
-    time.sleep(3)
-    out = drain(ser).decode(errors="replace")
-    if "alive" in out.lower() or "bytes" in out.lower():
+    out = uboot_cmd(ser, f"ping {ip}")
+    if "is alive" in out.lower() or "bytes from" in out.lower():
         print(f"[+] Ping OK: {ip} reachable")
         return True
     # retry
     for i in range(retries):
         time.sleep(2)
-        ser.write(f"ping {ip}\r".encode())
-        time.sleep(3)
-        out = drain(ser).decode(errors="replace")
-        if "alive" in out.lower() or "bytes" in out.lower():
+        out = uboot_cmd(ser, f"ping {ip}")
+        if "is alive" in out.lower() or "bytes from" in out.lower():
             print(f"[+] Ping OK (retry {i+1})")
             return True
     print(f"[-] Ping failed: {ip} unreachable")

@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.1
+version: 2.0.2
 category: devops
 metadata:
   agent:
@@ -81,6 +81,8 @@ Step 2: 模式判断
 Step 3: 配网 + 烧录
   ├─ setenv ipaddr/netmask/gatewayip/serverip
   ├─ IP 冲突预检：ping 设备自身 IP，通 = 被占用 → 换 IP（根因见 `references/troubleshooting.md`）
+  │   ⚠ 2026-09-24 修：此预检曾因 `f"ping {ip}\\r"` 写成**字面反斜杠+r**而从未真的 ping 过（静默失效），
+  │   且残渣会与下一条命令粘成一行；现在统一走 `uboot_cmd()`（真 `\r` + 写前清缓冲 + 读提示符）
   ├─ ping 验证连通性（可选）
   └─ mai_tftp → 监控擦写输出
 
@@ -153,7 +155,12 @@ setenv serverip <HOST_IP>
 mai_tftp
 ```
 
-ping 验证默认开启（`--no-ping` 跳过）。mai_tftp 首次初始化 PHY，ping 失败不阻断。
+ping 验证默认开启（`--no-ping` 跳过，同时跳过 IP 冲突预检）。mai_tftp 首次初始化 PHY，ping 失败不阻断。
+
+**写 U-Boot 的纪律（踩过坑）**：一律用 `uboot_cmd(ser, cmd)` —— 真正的 `\r` 只在它内部拼，
+写前 `reset_input_buffer()`，读回以提示符 `#` 为界。历史上 IP 冲突预检把 `\r` 写成字面反斜杠+r，
+U-Boot 收不到 CR ⇒ 命令不执行、文本堆在输入缓冲里直到下一条真 CR 才被一起结清
+（现场：`PRJ009# ping A\rping A\rping B` 粘成一行）。
 
 ---
 

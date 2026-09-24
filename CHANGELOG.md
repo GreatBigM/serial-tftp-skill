@@ -2,6 +2,26 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 2.0.2 (2026-09-24)
+
+### Fixed（真 bug：IP 冲突预检从上线起就是空转的）
+
+- **`scripts/auto-uboot-interrupt.py` IP 冲突预检写的是字面反斜杠+r，不是回车**：
+  `ser.write(f"ping {ipaddr}\\r".encode())` —— f-string 里 `\\r` 求值成**反斜杠和 r 两个可打印字符**，
+  U-Boot 的 hush 只在收到 CR 时才把整行交给解析器，于是：
+  ① 预检**从未真的 ping 过**（“IP 被占用”永远报不出来，而报错引导里还让人“先查 IP 冲突”→ 把人往沟里带）；
+  ② 文本堆在控制台输入缓冲里，直到下一条真 CR 被一起结清，现场表现
+  `PRJ009# ping 172.17.151.118\rping 172.17.151.118\rping 172.17.151.6` 粘成一行、
+  预检残渣还会被紧随其后的验证/命令吃掉（烧录偶发失败、靠 ping 重试自愈）。
+  （2026-09-17 现场记录 → 2026-09-24 定位，见 qwiki `hm6502_wifi/20260917-redline-310-vs-515-ab-result.md` §6）
+- **新增 `uboot_cmd(ser, cmd, timeout=10)` 统一出口**：写前 `reset_input_buffer()`、真正的 `\r` 只在这里拼、
+  读回以提示符 `#` 为界而不是固定 `sleep 3`。`check_ip_conflict()` 与 `ping_verify()` 全部改走它。
+  纪律：**今后任何写 U-Boot 的地方都走这个函数**（同类笔误不会再出现）。
+- 判据收紧：成功只看 U-Boot 的 `is alive` 行（失败行 `host X is not alive` 不含该子串，不误判）；
+  `retries=1` 的“最多 2 次尝试”语义写明；冲突提示补 `--no-ping` 逃生门（跳过含预检在内的网络预检）。
+- 顺手清掉 `ping_verify()` 开头的死代码（`ip = serverip.rstrip(...)` 下一行就被 `ip = serverip` 覆盖）。
+- 版本 2.0.1 → 2.0.2
+
 ## 2.0.1 (2026-09-23)
 
 ### Added（工作副本回灌，09-17/09-22 实机踩坑）
