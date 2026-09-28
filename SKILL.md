@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.2
+version: 2.0.3
 category: devops
 metadata:
   agent:
@@ -302,6 +302,8 @@ ser.close()
 | 日志洪流淹没 | 设备日志持续刷 | 登录前 drain，命令输出用 grep 过滤 |
 | 长命令截断 | 终端缓冲限制 | 脚本隔离法 |
 | login 反复掉线 | getty 竞争/噪声 | 见 references/serial-debug-diagnostics.md |
+| 有回显但命令不执行 | 未登录 / 业务槽 getty 丢失 | 见 references/serial-debug-diagnostics.md；业务槽常见"只剩回显、命令不执行"且该 boot 无网 ⇒ 只能重启恢复 |
+| 反复 login 失败后彻底无 shell | 顶到 init respawn 限额 | **别反复重试**：提示符出现时一次登录（root + 空密码直接进）；实测 ~8 次失败后本 boot 再无 getty ⇒ 重启设备 |
 
 ---
 
