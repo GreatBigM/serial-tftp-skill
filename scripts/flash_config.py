@@ -25,6 +25,7 @@ if sys.version_info < (3, 6):
 
 import json
 import os
+import shutil
 import re
 import subprocess
 import time
@@ -316,6 +317,66 @@ def preflight(port, tftp_dir, ipaddr, serverip, skip_tftp=False):
                                 break
                 except OSError:
                     pass
+
+    # ── 6. 烧录门禁（2026-09-11 沉淀；账见 qwiki 20260911-flash-partition-pitfalls-avoidance）──
+    #  6a 全量版脚本 + 范围一致性  6b 产物新鲜度  6c 本地 TFTP 自检（防 server 旧 inode）
+    #  6d 串口单进程（多进程会丢输入 → setenv 丢失/命令错乱）
+    if not skip_tftp and tftp_dir and os.path.isdir(tftp_dir):
+        import re as _re
+        txt = os.path.join(tftp_dir, "auto_update_tftp.txt")
+        nor_name = None
+        if os.path.isfile(txt):
+            try:
+                content = open(txt).read()
+            except OSError:
+                content = ""
+            m_erase = _re.search(r"sf\s+erase\s+0x0\s+0x([0-9a-fA-F]+)", content)
+            m_boot = _re.search(r"tftpboot\s+\S+\s+(\S+_NOR_ALL\.bin)", content)
+            if m_boot:
+                nor_name = m_boot.group(1)
+                nor_path = os.path.join(tftp_dir, nor_name)
+                if not os.path.isfile(nor_path):
+                    errors.append(f"全片镜像不存在: {nor_path}")
+                else:
+                    size = os.path.getsize(nor_path)
+                    if size != 16 * 1024 * 1024:
+                        warnings.append(f"全片镜像大小异常: {nor_name} = {size} (期望 16777216)")
+                    drv = os.path.join(tftp_dir, ".tmp/driver/aic8800_fdrv.ko")
+                    if os.path.isfile(drv) and os.path.getmtime(nor_path) + 60 < os.path.getmtime(drv):
+                        errors.append("产物不新鲜: NOR_ALL 早于 .tmp/driver/aic8800_fdrv.ko"
+                                      "（很可能漏了 make pack_all）")
+            else:
+                warnings.append("auto_update_tftp.txt 未见 <proj>_NOR_ALL.bin"
+                                "（分区级脚本；仅在未改 layout 时使用）")
+            if m_erase:
+                er = int(m_erase.group(1), 16)
+                if er != 0xF70000:
+                    warnings.append(f"擦写范围 0x{er:X} != 期望 0xF70000"
+                                    "（改过 algo/分区就要与 partition_layout 同步，三处联动）")
+        # 6b 本地 TFTP 自检
+        if nor_name and shutil.which("curl"):
+            try:
+                r = subprocess.run(["curl", "-s", "--max-time", "25", "-o", "/dev/null",
+                                    "-w", "%{size_download}",
+                                    "tftp://127.0.0.1/" + nor_name],
+                                   capture_output=True, text=True, timeout=30)
+                got = (r.stdout or "").strip()
+                if got != str(16 * 1024 * 1024):
+                    errors.append(f"本地 TFTP 自检失败: 取到 {got or '0'} 字节"
+                                  "（TFTP_DIRECTORY 不对 / 删过 out/ 后未重启 tftpd → 旧 inode）")
+            except Exception as e:
+                warnings.append(f"本地 TFTP 自检异常: {e}")
+    # 6d 串口单进程
+    try:
+        r = subprocess.run(["fuser", "-v", port], capture_output=True, text=True, timeout=5)
+        holder = (r.stdout or "") + (r.stderr or "")
+        if "ttyUSB" in holder and "USER" in holder:
+            errors.append("串口已被其他进程占用（多进程会瓜分输入 → setenv 丢失/命令错乱）: "
+                          + holder.strip().splitlines()[-1].strip())
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
 
     # ── 5. IP 设定 ──
     PLACEHOLDERS = ("<DEV_IP>", "<HOST_IP>", "")

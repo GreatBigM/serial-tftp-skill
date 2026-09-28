@@ -1,4 +1,11 @@
 # Changelog
+## 2.0.4 (2026-09-28)
+
+### Changed
+
+- 回灌本机 Hermes 副本的实测修正：reboot 压测三禁 + auto-uboot-interrupt 网络回读核对门禁（flash-gate 09-11）+ flash_config 烧录门禁 6a/6b/6c
+- 版本 2.0.3 → 2.0.4
+
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 

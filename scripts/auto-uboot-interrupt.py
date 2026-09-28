@@ -26,6 +26,7 @@ try:
     import serial  # pyserial
 except ImportError:
     import serial_compat as serial  # 标准库 termios 兼容层（零依赖）
+import re
 import time, sys, argparse, os, subprocess, re
 from flash_config import (
     resolve_baud, handle_config_subcommand, preflight, wizard,
@@ -259,7 +260,23 @@ def set_network(ser, ipaddr, netmask, gateway, serverip):
     if "#" not in out:
         print("[-] Network settings may have failed (no U-Boot prompt)")
         return False
-    print(f"[+] Network configured: dev={ipaddr} server={serverip}")
+    # 70mai fix (flash-gate, 2026-09-11): 回读核对——防"只设 ipaddr/serverip、
+    # gatewayip 残留旧值"导致 serverip 被当 off-link 走假网关（实测 T T T 超时）
+    time.sleep(0.3)
+    ser.reset_input_buffer()
+    ser.write(b"printenv ipaddr netmask gatewayip serverip\r")
+    time.sleep(1.5)
+    rb = ser.read(8192).decode(errors="replace")
+    print(rb.strip())
+    miss = [n for n, v in (("ipaddr", ipaddr), ("netmask", netmask),
+                           ("gatewayip", gateway), ("serverip", serverip))
+            if v and v not in rb]
+    if miss:
+        print(f"[-] env 回读核对失败，缺失/不匹配: {miss}")
+        print("    → 中止烧录（继续烧会因路由错误 T T T 白跑）")
+        return False
+    print(f"[+] Network configured & verified: dev={ipaddr} mask={netmask} gw={gateway} server={serverip}")
+    return True
     return True
 
 
@@ -295,6 +312,7 @@ def uboot_cmd(ser, cmd, timeout=10.0, settle=0.3):
             if re.search(rb"#\s*$", buf):   # 末行已是 U-Boot 提示符 = 命令返回了
                 break
     return buf.decode(errors="replace")
+
 
 
 def check_ip_conflict(ser, ipaddr, retries=1):
@@ -345,10 +363,17 @@ def ping_verify(ser, serverip, retries=2):
     return False
 
 
-def run_mai_tftp(ser, timeout=150):
-    """执行 mai_tftp 烧录并监控输出。"""
-    print(f"[*] Starting mai_tftp (max {timeout}s)...")
-    ser.write(b"mai_tftp\r")
+def run_mai_tftp(ser, timeout=420, script="auto_update_tftp.txt"):
+    """执行 mai_tftp 烧录并监控输出。
+
+    70mai fix (flash-false-positive, 2026-09-11): 原实现发裸 `mai_tftp`（依赖 CPSPR
+    解码 IP，CPSPR 空则兜底 10.3.2.4 → fetch 永远失败）且成功判据含 "reset"/"Linux
+    version"（设备 autoboot 回退也满足）→ **假阳性 "flash OK"**（09-09 半天无效烧录）。
+    现改为：①显式脚本名；②失败标记优先判负；③必须见到 TFTP 装载与写入完成标记才算成功。
+    返回: "written" / "failed" / "unknown"
+    """
+    print(f"[*] Starting mai_tftp {script} (max {timeout}s)...")
+    ser.write(f"mai_tftp {script}\r".encode())
     start = time.time()
     last_text = ""
     while time.time() - start < timeout:
@@ -366,9 +391,26 @@ def run_mai_tftp(ser, timeout=150):
                 time.sleep(0.5)
         except Exception:
             break
-    ok = "reset" in last_text.lower() or "Written" in last_text or "Linux version" in last_text
-    print("\n[+] Flash monitoring ended")
-    return ok
+    # 失败标记（优先判负）：TFTP 超时重试 / 中止 / 网卡未初始化 / 文件不存在
+    fail_pat = ("Retry count exceeded", "Abort", "No ethernet found",
+                "not found", "failed")
+    written_pat = ("bytes written", "Bytes transferred", "SF: ", "Loading: ")
+    failed = None
+    if "Retry count exceeded" in last_text or "No ethernet found" in last_text:
+        failed = "TFTP 拉取失败（检查四件套/env、serverip 网段、TFTP server 是否在跑）"
+    elif re.search(r"Loading:\s*(T\s*){5,}", last_text):
+        failed = "TFTP 无响应（连续 T 超时）"
+    if failed:
+        print(f"\n[-] Flash FAILED: {failed}")
+        return "failed"
+    if any(p_ in last_text for p_ in ("bytes written", "Bytes transferred")):
+        print("\n[+] Flash written (检测到写入完成标记)")
+        return "written"
+    if "Linux version" in last_text or "Uncompressing lzma Kernel Image" in last_text:
+        print("\n[!] 设备已重新启动，但未见写入标记——可能为 autoboot 回退（**不可判成功**）")
+        return "unknown"
+    print("\n[!] Flash monitoring ended without write marker (timeout)")
+    return "unknown"
 
 
 # ─── Step 4: 等待重启 ────────────────────────────────────────────────
@@ -460,7 +502,9 @@ def main():
     ipaddr = args.ipaddr or get("ipaddr") or ""
     serverip = args.serverip or get("serverip") or ""
     netmask = args.netmask or get("netmask") or "255.255.254.0"
-    gateway = args.gateway or serverip
+    # 70mai fix (2026-09-11): gateway 默认不再取 serverip（曾致 off-link 路由假网关）；
+    # 缺省用 host 侧 /23 网关 172.17.150.1（实测可用），可用 --gateway 覆盖
+    gateway = args.gateway or get("gateway") or "172.17.150.1"
     tftp_dir = args.tftp_dir or get("tftp_dir") or ""
 
     # 缓存用户指定的参数（下次免输入）
@@ -474,6 +518,8 @@ def main():
         set("netmask", args.netmask)
     if args.tftp_dir:
         set("tftp_dir", os.path.abspath(args.tftp_dir))
+    if args.gateway:
+        set("gateway", args.gateway)
 
     # ══════════════════════════════════════════════════════════════
     # Step 0: 环境预检
@@ -584,12 +630,19 @@ def main():
             print("[!] Ping failed but continuing (mai_tftp will init PHY)...")
             # 不退出：mai_tftp 首次会初始化 GMAC PHY，ping 时 PHY 可能未就绪
 
-    flash_ok = run_mai_tftp(ser)
-    if not flash_ok:
-        print("[-] Flash may have failed")
-        print("    恢复: 设备应仍在 U-Boot，重跑 flash --at-uboot")
+    flash_res = run_mai_tftp(ser)
+    if flash_res == "failed":
+        print("[-] Flash FAILED（判负标记命中，未写入）")
+        print("    自检：①env 四件套已 printenv 核对 ②serverip 与设备同网段")
+        print("    ③TFTP server 在跑且目录=产物目录（curl tftp://127.0.0.1/<proj>_NOR_ALL.bin）")
+        print("    ④设备仍在 U-Boot → 修好后重跑 flash --at-uboot")
         ser.close()
         sys.exit(1)
+    if flash_res == "unknown":
+        print("[!] 未捕获写入标记：**不能判成功**（可能 autoboot 回退烧旧镜像）")
+        print("    必须做烧后反证：/proc/version 时间戳 + 新参数（如 gro_bh_batch）是否存在")
+        ser.close()
+        sys.exit(2)
 
     # ══════════════════════════════════════════════════════════════
     # Step 4: 等待重启
@@ -602,7 +655,9 @@ def main():
     print("  烧录流程完成")
     print("═" * 50)
     print("  后续: 串口 ifconfig eth0 查 IP → adb connect")
-    print("  验证: cat /proc/uptime < 120s 确认是新启动")
+    print("  验证①: cat /proc/uptime < 120s 确认是新启动")
+    print("  验证②（门禁 8，防烧旧镜像）: cat /proc/version 编译时间戳 + "
+          "ls /sys/module/aic8800_fdrv/parameters/ 看新参数是否在")
     print("═" * 50)
 
 
