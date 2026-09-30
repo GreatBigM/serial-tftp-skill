@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.4
+version: 2.0.5
 category: devops
 metadata:
   agent:
@@ -227,6 +227,9 @@ reset
 | `capture_boot_log.py [baud] [sec]` | 完整启动日志采集 |
 | `reboot_capture.py [次数] [秒数] [baud]` | 循环重启采集 |
 | `reboot-stress.py --count N` | 重启压力测试 |
+| `flash_config.py` | 统一配置管理 + 环境预检（`~/.config/serial-tftp/config.json`） |
+| `serial_login_ip.py` | 精确时序登录 + 查 IP（日志洪流环境实测） |
+| `serial_compat.py` | pyserial 兼容层（无 pyserial 时零依赖替代） |
 
 所有脚本共享配置缓存，波特率自动复用。
 
@@ -370,6 +373,21 @@ mai_tftp
 - `references/build-output-staleness-verification.md` — 构建产物一致性验证
 - `references/post-flash-wifi-reconnect.md` — 烧录后 WiFi 重连
 - `references/skill-failure-handling.md` — 技能失败处理原则
+- `references/uboot-interrupt.md` — U-Boot 自动中断（打断 autoboot）
+- `references/hm6502-serial.md` — HM6502 串口参数
+- `references/hm6502-serial-output-only.md` — HM6502 串口只输出无输入（结论修正）
+- `references/echo-to-serial-workflow.md` — Echo-to-Serial 工作流
+- `references/full-boot-capture.md` — 完整上电日志采集（reboot 到 crash 全周期）
+- `references/hm6502-reboot-capture-v9.md` — HM6502 循环重启采集 v9 方案
+- `references/userspace-probe-debugging.md` — 用户态 Probe 日志采集与诊断
+- `references/miio-client-log-analysis.md` — miio_client 日志分析
+- `references/mips-binary-disassembly.md` — MIPS 预编译二进制反汇编指南
+- `references/working-python-patterns.md` — 可用 Python 模式（Busybox 串口环境实测）
+- `references/network_setup.md` — HM6502 开发环境网络配置
+- `references/ingenic-isp-sensor-debug.md` — Ingenic T32 ISP/Sensor 调试
+- `references/hm6801-auto-start-chain.md` — HM6801 开机自启链 & 关掉 c_mi_ipc
+- `references/hm6801-rmem-pool.md` — HM6801 rmem 池管理
+- `references/hm6801-sensor-mclk-fix.md` — HM6801 os08f10 传感器 MCLK 配置修复
 
 > 以上烧录类参考资料 2026-08-05 并入（原 ingenic-basic-tftp-flash 技能）。
 
