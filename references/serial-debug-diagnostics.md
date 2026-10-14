@@ -62,7 +62,7 @@ for baud in [921600, 115200, 1500000, 57600, 9600]:
     # stty 重置 → serial.Serial → 读数据 → 检查 printable ratio
 ```
 
-HM6502: **921600**（`console=ttyS1,921600n8`）
+<项目A>: **921600**（`console=ttyS1,921600n8`）
 
 ### 2.3 命令发送了但没执行
 
@@ -114,7 +114,7 @@ time.sleep(1.5)
 
 **修复**：每次重要命令前都验证登录状态（时间戳 echo）。
 
-## 三、快速启动序列（HM6502）
+## 三、快速启动序列（<项目A>）
 
 ```python
 import serial, time, subprocess
@@ -150,7 +150,7 @@ if f'L_{ts}' not in buf.decode(errors='replace'):
 
 # ④ 清理 + 设静态 IP
 ser.read(ser.in_waiting)
-ser.write(b'ifconfig eth0 172.17.150.200 netmask 255.255.254.0 up\r')
+ser.write(b'ifconfig eth0 <IP-1> netmask 255.255.254.0 up\r')
 time.sleep(1)
 ```
 

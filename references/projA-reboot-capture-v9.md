@@ -1,7 +1,7 @@
-# HM6502 循环重启采集 v9 方案
+# <项目A> 循环重启采集 v9 方案
 
 ## 脚本路径
-`/home/liusen/hm6502_reboot_capture_v9.py`
+`<用户目录>/<项目A>_reboot_capture_v9.py`
 
 ## 核心逻辑
 ```
@@ -77,7 +77,7 @@ reboot 压测与「抢 U-Boot 烧录」目的相反——**压测期间绝不能
 
 1. **reboot 后到 `70mai login:` 出现前一律纯读**：内核 reboot 置 warm 标志 `CPSPR=0x3535` → U-Boot bootdelay 缩到 ~1s，**任何写入字节都打断 autoboot → 设备停在 `PRJ009#`**（现象像"卡在 boot"，需手敲 `boot` 或冷启动）。压测循环里唯一允许的写入（login 的 `\r`）必须等 login 提示出现后再发。
 2. **启动判定不得匹配 shell 回显**：发 `reboot` 后第一段输出含自身命令行回显 `[root@70mai:tmp]$ reboot`，拿它当"起来了" = **假 OK**（曾骗过首版脚本）。正确判据：见 `70mai login:` 或 `Linux version`，且要求本轮确实见过 `Restarting system|U-Boot 20` 才算真 reboot。
-3. **状态不跨 reboot**：① 会话会丢——每轮先重登，否则 `reboot` 被当 login 用户名 → `Password:` → 白等 60s 超时（曾被记成"OK 62s"）；② `/tmp` 是 tmpfs——`iperf3` 每轮消失，`[ -x /tmp/iperf3 ] || wget` 必须每轮执行，否则静默退化成"关联态"而非"负载态"（症状 `-sh: /tmp/iperf3: not found`）。
+3. **状态不跨 reboot**：① 会话会丢——每轮先重登，否则 `reboot` 被当 login 用户名 → `Password` 提示 → 白等 60s 超时（曾被记成"OK 62s"）；② `/tmp` 是 tmpfs——`iperf3` 每轮消失，`[ -x /tmp/iperf3 ] || wget` 必须每轮执行，否则静默退化成"关联态"而非"负载态"（症状 `-sh: /tmp/iperf3: not found`）。
 
 参考脚本：`/tmp/r2_stress.py`（负载态压测 v2）、`/tmp/r2_flash2.py`（从 shell 抓 U-Boot 版）、`/tmp/r2_regress.py`（空载+吞吐+rmmod+dmesg）。
 
@@ -91,4 +91,4 @@ reboot 压测与「抢 U-Boot 烧录」目的相反——**压测期间绝不能
 
 ## 参考
 - `serial-debug` skill — 通用串口交互
-- `hm6502-stress-test` skill — 压力测试上下文
+- `<项目A>-stress-test` skill — 压力测试上下文

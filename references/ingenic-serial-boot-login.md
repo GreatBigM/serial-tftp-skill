@@ -4,7 +4,7 @@ description: Ingenic 平台调试环境建立 — 串口盲打登录 → 查 DHC
 category: devops
 metadata:
   hermes:
-    triggers: [ingenic, hm6502, hm6801, 串口登录, adb连接, 调试环境, 日志洪流]
+    triggers: [ingenic, <项目A>, <项目E>, 串口登录, adb连接, 调试环境, 日志洪流]
 ---
 
 # Ingenic 平台调试环境建立
@@ -13,8 +13,8 @@ metadata:
 
 ## 适用平台
 
-- HM6502（T32 MIPS）
-- HM6801（T32 PRJ009）
+- <项目A>（T32 MIPS）
+- <项目E>（T32 PRJ009）
 - 其他 Ingenic T32 平台（Linux shell + adbd 自启）
 
 ## 前置条件
@@ -24,7 +24,7 @@ metadata:
 - 开发机与设备 DHCP 同网段
 - adbd 由 init 托管自启（不需要手动启动）
 
-> ⚠️ **波特率不是固定 115200！** 控制台波特率由固件/uboot 决定，写在 cmdline（如 `console=ttyS1,921600n8`）。HM6502 历史值：1500000 → 921600（2026-07-16 起）。波特率不对时串口读出全是二进制乱码。确认方法：已知设备看 `/proc/cmdline` 的 `console=` 字段；未知设备按 §「波特率探测」逐一尝试。
+> ⚠️ **波特率不是固定 115200！** 控制台波特率由固件/uboot 决定，写在 cmdline（如 `console=ttyS1,921600n8`）。<项目A> 历史值：1500000 → 921600（2026-07-16 起）。波特率不对时串口读出全是二进制乱码。确认方法：已知设备看 `/proc/cmdline` 的 `console=` 字段；未知设备按 §「波特率探测」逐一尝试。
 
 ## 波特率探测（未知/变更固件必做）
 
@@ -87,7 +87,7 @@ txt = buf.decode(errors='replace').lower()
 
 if len(buf) == 0:
     mode = 'DEAD'        # 设备断电/线松
-elif any(p in txt for p in ['prj009#','hm6502#','hm6801#','=>']):
+elif any(p in txt for p in ['prj009#','<项目A>#','<项目E>#','=>']):
     mode = 'UBOOT'       # U-Boot 提示符
 elif any(p in txt for p in ['login:','70mai login']):
     mode = 'LOGIN'       # Linux 未登录
@@ -221,8 +221,8 @@ netstat -an | grep 5555
 **输出特征：**
 ```
 tcp  0  0 0.0.0.0:5555  0.0.0.0:*  LISTEN
-tcp  0  0 172.17.151.160:5555  172.17.151.6:45412  SYN_RECV
-tcp  0  0 172.17.151.160:5555  172.17.151.6:36194  SYN_RECV
+tcp  0  0 <IP-1>:5555  <IP-2>:45412  SYN_RECV
+tcp  0  0 <IP-1>:5555  <IP-2>:36194  SYN_RECV
 ```
 
 - 设备在 LISTEN → adbd 正常
@@ -258,17 +258,17 @@ ser.write(b'/tmp/<binary> > /tmp/<log> 2>&1 &\nsleep 4\ncat /tmp/<log>\n')
 
 ## 八、相关技能
 
-- `hm6502-build-flash-test` — HM6502 编译/烧录/ADB/iperf3 全流程（含 eth0 优先策略）
+- `<项目A>-build-flash-test` — <项目A> 编译/烧录/ADB/iperf3 全流程（含 eth0 优先策略）
 - `serial-tftp` — TFTP 烧录 + switch_mode debug
 - `bench-device-performance` — 性能/内存基线采集
 
-## 九、HM6502 专项：eth0 免 RSA 认证
+## 九、<项目A> 专项：eth0 免 RSA 认证
 
-> **关键区别**：HM6502 上 eth0 ADB 永远是 `device` 状态（无需 RSA 密钥认证），WiFi ADB 几乎永远是 `offline`。烧录后必须用 eth0 IP 连 ADB。
+> **关键区别**：<项目A> 上 eth0 ADB 永远是 `device` 状态（无需 RSA 密钥认证），WiFi ADB 几乎永远是 `offline`。烧录后必须用 eth0 IP 连 ADB。
 
 ### 烧录后等待稳定
 
-HM6502 烧录后内核和应用日志会淹没串口约 60 秒（c_mi_ipc 启动、MI IPC 初始化等）。**串口查 IP 前必须等 60 秒**，否则盲打命令被日志冲掉，ifconfig 输出被埋没。
+<项目A> 烧录后内核和应用日志会淹没串口约 60 秒（c_mi_ipc 启动、MI IPC 初始化等）。**串口查 IP 前必须等 60 秒**，否则盲打命令被日志冲掉，ifconfig 输出被埋没。
 
 ```python
 import time
@@ -293,7 +293,7 @@ ips = re.findall(r'inet addr:(\d+\.\d+\.\d+\.\d+)', out)
 print(ips[0] if ips else 'none')
 ```
 
-> HM6502 DHCP 范围 172.17.150.0/23。重启后 IP 会变，每次需要重新查。
+> <项目A> DHCP 范围 <IP-3>/23。重启后 IP 会变，每次需要重新查。
 
 ### ADB 连接 + 验证
 
@@ -304,4 +304,4 @@ adb devices   # 应显示 device（不是 offline）
 
 ### busybox 限制
 
-HM6502 busybox 缺少 `head`/`cut`/`sort`/`uptime` applet。脚本中避免使用。进程列表用 `/proc/[0-9]*` + awk；负载用 `cat /proc/loadavg`。
+<项目A> busybox 缺少 `head`/`cut`/`sort`/`uptime` applet。脚本中避免使用。进程列表用 `/proc/[0-9]*` + awk；负载用 `cat /proc/loadavg`。

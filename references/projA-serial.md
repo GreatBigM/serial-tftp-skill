@@ -1,4 +1,4 @@
-# HM6502 串口参数
+# <项目A> 串口参数
 
 - 波特率: 115200
 - 登录: 用户 `root`，密码**分固件版本**：旧版空密码（直接回车），新版 `root`/`root`。先用空密码尝试，失败后用 `root`/`root` 重试
@@ -28,10 +28,10 @@ s.write(b"killall -9 apphilogcat mai_log_service miio_client c_mi_ipc 2>/dev/nul
 多轮重启（约 2-3 次）后 DHCP 不再分配 IP。必须设置静态 IP：
 
 ```bash
-ifconfig eth0 172.17.151.100 netmask 255.255.240.0 up
+ifconfig eth0 <IP-1> netmask 255.255.240.0 up
 ```
 不需要 `down` 先。不要同时运行 `udhcpc`。
 
 ## 相关 skill
 
-- `hm6502-stress-test` — 重启压力测试脚本和指南
+- `<项目A>-stress-test` — 重启压力测试脚本和指南

@@ -289,7 +289,7 @@ def uboot_cmd(ser, cmd, timeout=10.0, settle=0.3):
     字符**，不是回车 0x0D。U-Boot 的 hush 只在收到 CR 时才把整行交给解析器，
     于是那串文本一直躺在控制台输入缓冲里等下一个真 CR，被一起结清，现场表现：
 
-        PRJ009# ping 172.17.151.118\rping 172.17.151.118\rping 172.17.151.6
+        PRJ009# ping <IP-1>\rping <IP-1>\rping <IP-2>
 
     即「预检从未真的 ping 过（静默失效）」+「残渣被下一条命令吃掉」。
 
@@ -367,7 +367,7 @@ def run_mai_tftp(ser, timeout=420, script="auto_update_tftp.txt"):
     """执行 mai_tftp 烧录并监控输出。
 
     70mai fix (flash-false-positive, 2026-09-11): 原实现发裸 `mai_tftp`（依赖 CPSPR
-    解码 IP，CPSPR 空则兜底 10.3.2.4 → fetch 永远失败）且成功判据含 "reset"/"Linux
+    解码 IP，CPSPR 空则兜底 <IP> → fetch 永远失败）且成功判据含 "reset"/"Linux
     version"（设备 autoboot 回退也满足）→ **假阳性 "flash OK"**（09-09 半天无效烧录）。
     现改为：①显式脚本名；②失败标记优先判负；③必须见到 TFTP 装载与写入完成标记才算成功。
     返回: "written" / "failed" / "unknown"
@@ -503,8 +503,10 @@ def main():
     serverip = args.serverip or get("serverip") or ""
     netmask = args.netmask or get("netmask") or "255.255.254.0"
     # 70mai fix (2026-09-11): gateway 默认不再取 serverip（曾致 off-link 路由假网关）；
-    # 缺省用 host 侧 /23 网关 172.17.150.1（实测可用），可用 --gateway 覆盖
-    gateway = args.gateway or get("gateway") or "172.17.150.1"
+    # 本仓不放内网默认值：跨网段烧录给 --gateway（或 TFTP_GATEWAY），首次给出的会缓存
+    gateway = args.gateway or get("gateway") or os.environ.get("TFTP_GATEWAY", "")
+    if not gateway:
+        print("[!] 未指定 gateway（--gateway / TFTP_GATEWAY）——跳过 gatewayip 设置；跨网段烧录必须指定")
     tftp_dir = args.tftp_dir or get("tftp_dir") or ""
 
     # 缓存用户指定的参数（下次免输入）

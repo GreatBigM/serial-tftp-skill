@@ -1,13 +1,13 @@
-# 2026-07-17: HM6502 Partial-Erase Flash via --at-uboot Recovery
+# 2026-07-17: <项目A> Partial-Erase Flash via --at-uboot Recovery
 
 ## 背景
 
-- **项目**: HM6502 (Ingenic T32)
+- **项目**: <项目A> (Ingenic T32)
 - **波特率**: 921600
 - **擦除范围**: `0xef0000`（部分擦，保留 env/data/log 分区）
-- **固件**: `hm6502_NOR_ALL.bin` 16MB
+- **固件**: `<项目A>_NOR_ALL.bin` 16MB
 - **脚本**: `auto-uboot-interrupt.py flash`
-- **主机 IP**: 172.17.151.6
+- **主机 IP**: <IP-1>
 
 ## 执行流程
 
@@ -54,8 +54,8 @@ python3 auto-uboot-interrupt.py flash --at-uboot --baud 921600
 
 | 检查项 | 结果 |
 |--------|------|
-| 旧 ADB IP (172.17.151.200) | ❌ 连不上 |
-| 新 IP (串口 `ifconfig eth0`) | `172.17.150.56`（DHCP 重新分配） |
+| 旧 ADB IP (<IP-2>) | ❌ 连不上 |
+| 新 IP (串口 `ifconfig eth0`) | `<IP-3>`（DHCP 重新分配） |
 | ADB kill-server + connect | ✅ 正常 |
 | c_mi_ipc 运行 | ✅ PID 453 正常工作 |
 | 设备启动 | ✅ 日志可见新固件 |

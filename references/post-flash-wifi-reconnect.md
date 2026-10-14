@@ -34,7 +34,7 @@ adb shell ping -c 2 <网关IP>      # 确认连通
 
 ## 2026-07-17 实测
 
-- 设备：HM6502，部分擦 0xef0000 烧录，WiFi SSID=znetx 5GHz 802.11ac
+- 设备：<项目A>，部分擦 0xef0000 烧录，WiFi SSID=znetx 5GHz 802.11ac
 - 烧录后 wlan0 无 IP，`/data/wpa_supplicant.conf` 配置完好
-- 手动启动 wpa_supplicant + udhcpc → 获取 10.10.10.207，ping 3-9ms
+- 手动启动 wpa_supplicant + udhcpc → 获取 <IP-1>，ping 3-9ms
 - iperf3 WiFi 测速：TX 70.5 Mbps / RX 75.5 Mbps

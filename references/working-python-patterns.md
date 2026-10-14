@@ -1,4 +1,4 @@
-# Working Python Patterns (Verified on HM6502 Busybox Serial)
+# Working Python Patterns (Verified on <项目A> Busybox Serial)
 
 ## Login + Drain Helper
 
@@ -48,7 +48,7 @@ def read_until(ser, patterns, timeout=8):
     return buf
 
 def login_precise(ser):
-    """精确时序登录。HM6502/HM6801: root + 空密码（不是 root/root！）"""
+    """精确时序登录。<项目A>/<项目E>: root + 空密码（不是 root/root！）"""
     # 1. 等 login 提示符
     ser.reset_input_buffer()
     time.sleep(1)
@@ -58,7 +58,7 @@ def login_precise(ser):
     # 2. 发用户名
     ser.write(b'root\r')
     time.sleep(1.5)
-    buf = read_until(ser, [b'Password:', b'incorrect', b'login:'], timeout=5)
+    buf = read_until(ser, [b'Password', b'incorrect', b'login:'], timeout=5)
     # 3. 发空密码（关键：密码是空，不是 root）
     ser.write(b'\r')
     time.sleep(1.5)
@@ -145,7 +145,7 @@ subprocess.run(['stty', '-F', '/dev/ttyUSB0', '921600',
 time.sleep(0.3)
 ```
 
-## HM6502 Serial Parameters
+## <项目A> Serial Parameters
 
 | Parameter | Value |
 |-----------|-------|

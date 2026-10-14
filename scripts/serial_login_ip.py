@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""串口精确时序登录 + 查 IP（HM6502/HM6801 日志洪流环境，2026-08-04 实战验证）
+"""串口精确时序登录 + 查 IP（<项目A>/<项目E> 日志洪流环境，2026-08-04 实战验证）
 
 用法:
     python3 serial_login_ip.py [port] [baud]
@@ -7,7 +7,7 @@
 
 关键点:
     - 密码是空密码（root + 空，不是 root/root）
-    - 等 login: → 发 root → 等 Password: → 发空密码 → 查 IP
+    - 等 `login` 提示 → 发 root → 等 `Password` 提示 → 发空 → 查 IP
     - 日志洪流（MikeInit 刷屏）下先降噪: killall -9 apphilogcat c_mi_ipc miio_client
 """
 import serial, time, re, sys
@@ -42,7 +42,7 @@ if b'login:' not in buf:
 # 3. 发用户名 root
 ser.write(b'root\r')
 time.sleep(1.5)
-buf = read_until([b'Password:', b'incorrect', b'login:'], timeout=5)
+buf = read_until([b'Password', b'incorrect', b'login:'], timeout=5)
 print(f"  用户名后: {buf[-60:]!r}")
 
 # 4. 发空密码（不是 root！）

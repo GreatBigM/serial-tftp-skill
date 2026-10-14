@@ -1,6 +1,6 @@
 # miio_client 日志分析参考
 
-HM6502 miio_client 行为模式，基于 5 小时/9.8 万行日志分析。
+<项目A> miio_client 行为模式，基于 5 小时/9.8 万行日志分析。
 
 ## Timer 精度
 

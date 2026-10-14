@@ -1,7 +1,7 @@
 # Echo-to-Serial Workflow
 
-> 2026-07-25 session: HM6502 push+WiFi+iperf3 serial test
-> Host: Linux x86_64, Device: HM6502 (Ingenic T32), Baud: 921600
+> 2026-07-25 session: <项目A> push+WiFi+iperf3 serial test
+> Host: Linux x86_64, Device: <项目A> (Ingenic T32), Baud: 921600
 
 ## 背景
 

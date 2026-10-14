@@ -1,6 +1,6 @@
 # Ingenic T32 ISP/Sensor Debugging
 
-> Collected from HM6801 (os08f10 sensor, T32 SoC, 64MB DDR, NOR 16MB)
+> Collected from <项目E> (os08f10 sensor, T32 SoC, 64MB DDR, NOR 16MB)
 
 ## RTSP Demo MCLK Crash
 

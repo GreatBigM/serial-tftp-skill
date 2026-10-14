@@ -83,4 +83,4 @@ Format data partition...
 | 内存整理 | init.sh 内容确认 | 包含 `sync; drop_caches; compact_memory` |
 | 全量擦除 | mai_tftp 输出 | `sf erase 0x0 0x1000000` |
 | /data 已清 | 串口日志 | 首次启动出现 `Format data partition...` |
-| 内核时间戳 | `cat /proc/version` | 与 `ls -l out/image_hm6801/hm6801_NOR_ALL.bin` 时间一致 |
+| 内核时间戳 | `cat /proc/version` | 与 `ls -l out/image_<项目E>/<项目E>_NOR_ALL.bin` 时间一致 |

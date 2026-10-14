@@ -1,6 +1,6 @@
 # U-Boot 自动中断（打断 autoboot）
 
-> 串口 reboot 后，在 U-Boot 2 秒倒计时内按键中断，进入 `PRJ009#`/`HM6502#` 提示符。
+> 串口 reboot 后，在 U-Boot 2 秒倒计时内按键中断，进入 `PRJ009#`/`<项目A>#` 提示符。
 
 ## 适用场景
 
@@ -16,7 +16,7 @@ U-Boot, uboot, Hit any key, stop autoboot, SPI Nor ID,
 SPI, SF: Detected, DRAM:, Press, T32, Ingenic
 ```
 
-倒计时文本示例（hm6801 PRJ009）：
+倒计时文本示例（<项目E> PRJ009）：
 ```
 Hit any key to stop autoboot:  2 \b\b\b 1 \b\b\b 0
 ```
@@ -72,8 +72,8 @@ ser.close()
 
 | 平台 | U-Boot 提示符 | 倒计时 | 备注 |
 |------|--------------|--------|------|
-| HM6801 (PRJ009) | `PRJ009#` | 2s | 实测通过 |
-| HM6502 | `HM6502#` (推测) | 待测 | 结构相同 |
+| <项目E> (PRJ009) | `PRJ009#` | 2s | 实测通过 |
+| <项目A> | `<项目A>#` (推测) | 待测 | 结构相同 |
 
 ## 注意事项
 

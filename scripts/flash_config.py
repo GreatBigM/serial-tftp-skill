@@ -193,14 +193,14 @@ def wizard():
     # 先收集全部输入（不写盘）
     ipaddr = _ask(
         "设备 IP", default=cfg.get("ipaddr", ""),
-        validator=_valid_ip, hint="如 192.168.1.10")
+        validator=_valid_ip, hint="如 192.0.2.10")
     if ipaddr is None:
         print("[-] 已取消，配置未修改")
         return False
 
     serverip = _ask(
         "TFTP 服务器 IP", default=cfg.get("serverip", ""),
-        validator=_valid_ip, hint="开发机 IP，如 192.168.1.1")
+        validator=_valid_ip, hint="开发机 IP，如 192.0.2.1")
     if serverip is None:
         print("[-] 已取消，配置未修改")
         return False

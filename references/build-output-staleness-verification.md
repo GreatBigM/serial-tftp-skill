@@ -2,20 +2,20 @@
 
 ## 背景
 
-HM6502/HM6801 的增量编译可能产生 **内核 vmlinux 新 + 模块 .ko 旧** 的不一致状态。原因：`make_drivers.sh` 把编译的新 .ko 放入 `.tmp/driver/`，但 `system_b.squashfs` 从 `.tmp/system_b/lib/modules/` 打包。两个目录来源不同（`make modules_install` vs `make_drivers.sh`），可能用到不同批次的编译产物。
+<项目A>/<项目E> 的增量编译可能产生 **内核 vmlinux 新 + 模块 .ko 旧** 的不一致状态。原因：`make_drivers.sh` 把编译的新 .ko 放入 `.tmp/driver/`，但 `system_b.squashfs` 从 `.tmp/system_b/lib/modules/` 打包。两个目录来源不同（`make modules_install` vs `make_drivers.sh`），可能用到不同批次的编译产物。
 
 ## 验证命令
 
 ```bash
 # 在宿主对比三处 MD5
 echo "=== Build output (driver/) ==="
-md5sum out/image_hm6502/.tmp/driver/tx-isp-PRJ009.ko
+md5sum out/image_<项目A>/.tmp/driver/tx-isp-PRJ009.ko
 
 echo "=== Staging (system_b/) ==="
-md5sum out/image_hm6502/.tmp/system_b/lib/modules/tx-isp-PRJ009.ko
+md5sum out/image_<项目A>/.tmp/system_b/lib/modules/tx-isp-PRJ009.ko
 
 echo "=== Packed (system_b.img) ==="
-unsquashfs -f -d /tmp/sys_check out/image_hm6502/system_b.img lib/modules/tx-isp-PRJ009.ko 2>/dev/null
+unsquashfs -f -d /tmp/sys_check out/image_<项目A>/system_b.img lib/modules/tx-isp-PRJ009.ko 2>/dev/null
 md5sum /tmp/sys_check/lib/modules/tx-isp-PRJ009.ko
 
 echo "=== Device ==="
@@ -35,7 +35,7 @@ rm -f out/image_<项目>/.tmp/system_b/lib/modules/sunrpc.ko
 # 重建 squashfs + NOR
 mksquashfs out/image_<项目>/.tmp/system_b/ out/image_<项目>/.tmp/system_b.squashfs -noappend -comp xz
 cp out/image_<项目>/.tmp/system_b.squashfs out/image_<项目>/system_b.img
-docker run --rm -v /mnt/data/项目:/workspace smart:latest bash -c 'cd /workspace/build && make pack_all'
+docker run --rm -v <代码树>/项目:/workspace smart:latest bash -c 'cd /workspace/build && make pack_all'
 ```
 
 ## 彻底预防

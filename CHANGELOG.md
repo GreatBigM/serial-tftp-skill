@@ -6,6 +6,7 @@
 - **`--target hermes,claude`（空格形式）从未生效**：解析只认 `--target=`，空格形式把值吞成空串后落进"非交互 = 装全部"分支——而 README / 用法行 / 脚本头部**三处文档全写的空格形式**。现两种形式都支持，且 `--target` 缺参数时直接报错退出（不再静默装全部）。
 - **备份落在 skills 扫描根之内**：旧版备份写成 `<skills>/<name>.bak.<时间戳>`，而 agent 按「含 SKILL.md 的目录」发现技能、不看目录名 ⇒ 备份被当成**第二个同名技能**加载（重名歧义下静默跳过其一）。现备份落 `<tool 根>/skills-backup/`（扫描根之外），README 与脚本尾注同步。
 - **挂上 pre-push 闸门（脱敏 + CHANGELOG 同步）**：`scripts/publish-check.py`（扫项目代号 / 内网 IP / MAC / 长 hash / 凭据 / 本机路径，自带 `--self-test`）+ `scripts/hooks/pre-push`；启用一次 `git config core.hooksPath scripts/hooks`。理由与脱敏规则同源：**靠人记必然回潮**，检查要做成"推送时自动拦"而不是"记得手动跑"。CHANGELOG 闸门名单 = SKILL.md / install.sh / scripts/ / references/。
+- **脱敏：全量清理项目代号 / 内网 IP / MAC / 内网路径**（闸门首扫命中后执行）——正文、references、脚本注释与默认值一并处理：项目代号 → `<项目A>`…`<项目F>`（**大小写不敏感**，大写写法一并换）；IP / MAC → `<IP-n>` / `<MAC-n>`（**文件内编号唯一**，保住句内多机对比关系）；`/mnt/data/` → `<代码树>/`，本机家目录 → `<用户目录>/`；**脚本里的功能性默认值改为环境变量**（`TFTP_PROJECTS` / `DEVICE_IP` / `TFTP_GATEWAY`，未给时报错或显式跳过，不再写死内网值）；9 个文件名含代号的 references 改名（`hm6502-* → projA-*`、`hm6801-* → projE-*`），SKILL.md 引用清单同步。历史不回改（已公开的收不回，force push 也不行），本次只保证往后版本不再含。
 - 版本 2.0.5 → 2.0.6
 
 ## 2.0.5 (2026-09-30)
@@ -45,9 +46,9 @@
   U-Boot 的 hush 只在收到 CR 时才把整行交给解析器，于是：
   ① 预检**从未真的 ping 过**（“IP 被占用”永远报不出来，而报错引导里还让人“先查 IP 冲突”→ 把人往沟里带）；
   ② 文本堆在控制台输入缓冲里，直到下一条真 CR 被一起结清，现场表现
-  `PRJ009# ping 172.17.151.118\rping 172.17.151.118\rping 172.17.151.6` 粘成一行、
+  `PRJ009# ping <IP-1>\rping <IP-1>\rping <IP-2>` 粘成一行、
   预检残渣还会被紧随其后的验证/命令吃掉（烧录偶发失败、靠 ping 重试自愈）。
-  （2026-09-17 现场记录 → 2026-09-24 定位，见 qwiki `hm6502_wifi/20260917-redline-310-vs-515-ab-result.md` §6）
+  （2026-09-17 现场记录 → 2026-09-24 定位，见 qwiki `<项目A>_wifi/20260917-redline-310-vs-515-ab-result.md` §6）
 - **新增 `uboot_cmd(ser, cmd, timeout=10)` 统一出口**：写前 `reset_input_buffer()`、真正的 `\r` 只在这里拼、
   读回以提示符 `#` 为界而不是固定 `sleep 3`。`check_ip_conflict()` 与 `ping_verify()` 全部改走它。
   纪律：**今后任何写 U-Boot 的地方都走这个函数**（同类笔误不会再出现）。
@@ -88,7 +89,7 @@
 ## 1.6.0 (2026-08-05)
 
 ### Added（烧录参考资料并入，2026-08-05 skill 审计）
-- **14 个烧录参考资料从 ingenic-basic-tftp-flash 并入** `references/`：post-flash-md5-verification（烧录后 MD5 三方对齐铁律）、hm6502-full-erase-flash（全擦实录）、hm6502-partial-erase-flash-at-uboot-recovery（部分擦除+U-Boot 恢复）、hm6502-flash-timing-zb25vq128（timing 与 ZB25VQ128 变体）、tftp-flash-baud-uboot-recovery（波特率+打断恢复）、20260717-shell-timeout-recovery、bricked-nor-recovery（变砖恢复）、nor-all-bin-layout-recovery、flash-network-diagnosis-anti-pattern、flash-verify-boot-changes、flashing-concurrent-prevention、build-output-staleness-verification、post-flash-wifi-reconnect、skill-failure-handling
+- **14 个烧录参考资料从 ingenic-basic-tftp-flash 并入** `references/`：post-flash-md5-verification（烧录后 MD5 三方对齐铁律）、<项目A>-full-erase-flash（全擦实录）、<项目A>-partial-erase-flash-at-uboot-recovery（部分擦除+U-Boot 恢复）、<项目A>-flash-timing-zb25vq128（timing 与 ZB25VQ128 变体）、tftp-flash-baud-uboot-recovery（波特率+打断恢复）、20260717-shell-timeout-recovery、bricked-nor-recovery（变砖恢复）、nor-all-bin-layout-recovery、flash-network-diagnosis-anti-pattern、flash-verify-boot-changes、flashing-concurrent-prevention、build-output-staleness-verification、post-flash-wifi-reconnect、skill-failure-handling
 - SKILL.md 参考资料段同步列出全部 16 个 references
 - 无关调试类资料（i2c/mjac/isp 等 12 个）转存 qwiki 项目知识库
 - 版本 1.5.0 → 1.6.0
@@ -102,7 +103,7 @@
 
 ## 1.4.0 (2026-08-01)
 
-### Fixed（HM6502 真机实践复盘，三轮 LOOP 优化）
+### Fixed（<项目A> 真机实践复盘，三轮 LOOP 优化）
 - **IP 冲突预检**：配网后 ping 设备自身 IP，通 = 被占用 → 中止并给排查路径（根因：设备 IP 与局域网设备冲突导致 TFTP T T T T 反复失败）
 - **打断 U-Boot 提示符探测化**：不再硬编码 `<项目>#`（真实设备是 PRJ009# 匹配不上），改正则匹配行尾 # 或 =>
 - **静默窗口打断**：有输出时不发回车，静默 ≥0.3s 才砸——避免和 mai_tftp 重试循环的 T 输出打架

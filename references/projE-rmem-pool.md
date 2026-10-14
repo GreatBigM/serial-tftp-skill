@@ -1,6 +1,6 @@
-# HM6801 rmem Pool Management
+# <项目E> rmem Pool Management
 
-## rmem Layout (HM6801, 64MB DRAM)
+## rmem Layout (<项目E>, 64MB DRAM)
 
 ```
 bootargs: mem=42496K@0x0 rmem=23040K@0x2980000
@@ -52,7 +52,7 @@ cat /tmp/continuous_mem_info
 | 1080p (1920×1080) | ~8 MB | 0 |
 | 480P (832×480) | ~1 MB | 1 |
 
-## rmem Budget (HM6801 4K)
+## rmem Budget (<项目E> 4K)
 
 ```
 rmem 22.5 MB

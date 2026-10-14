@@ -1,10 +1,10 @@
-# HM6502 TFTP 烧录 timing & ZB25VQ128 变体记录
+# <项目A> TFTP 烧录 timing & ZB25VQ128 变体记录
 
 日期: 2026-07-17
 
 ## 设备信息
 
-- 项目: HM6502 (Ingenic T32, PRJ009)
+- 项目: <项目A> (Ingenic T32, PRJ009)
 - Flash IC 实测: **ZB25VQ128** (不是 doc 中的 EN25QX128A)
 - 串口波特率: 921600
 - 固件大小: 16777216 bytes (16MB, 0x1000000)
@@ -31,7 +31,7 @@ ZB25VQ128 是 Zbit Semiconductor 的 16MB SPI NOR Flash，与 EN25QX128A (EON) �
 
 ## 串口刷屏现象
 
-HM6502 固件启动后，c_mi_ipc 应用层立即向串口输出日志:
+<项目A> 固件启动后，c_mi_ipc 应用层立即向串口输出日志:
 - ISP/VPU 初始化
 - Motor calibration 完成
 - IMP_Encoder_GetStream 每 ~25 帧/次 (~1s 间隔)

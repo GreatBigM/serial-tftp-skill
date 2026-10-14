@@ -2,7 +2,7 @@
 
 ## 场景
 
-HM6502 部分擦（0xef0000）烧录过程中，`auto-uboot-interrupt.py flash --baud 921600` 在 Linux 模式成功登录、发送 reboot，但错过 U-Boot 1s bootdelay，报 `Failed to interrupt U-Boot`。
+<项目A> 部分擦（0xef0000）烧录过程中，`auto-uboot-interrupt.py flash --baud 921600` 在 Linux 模式成功登录、发送 reboot，但错过 U-Boot 1s bootdelay，报 `Failed to interrupt U-Boot`。
 
 ## 恢复路径
 

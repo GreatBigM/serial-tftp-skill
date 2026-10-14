@@ -1,4 +1,4 @@
-# 全擦烧录完整实录（2026-07-17 HM6502）
+# 全擦烧录完整实录（2026-07-17 <项目A>）
 
 ## 背景
 
@@ -6,7 +6,7 @@ OpenSpec change `zero-copy-yuv-to-ai` 需要烧录新固件验证。设备此前
 
 ## 波特率纠正
 
-skill 原记录 HM6502 串口波特率 1500000（1.5M），**实际为 921600**。
+skill 原记录 <项目A> 串口波特率 1500000（1.5M），**实际为 921600**。
 
 | 波特率 | 串口输出 |
 |--------|---------|
@@ -32,8 +32,8 @@ Link is up in FULL DUPLEX mode
 Link is with 100M Speed
 
 # 2. TFTP 下载固件
-TFTP from server 172.17.151.6; our IP address is 172.17.150.200
-Filename 'hm6502_NOR_ALL.bin'.
+TFTP from server <IP-1>; our IP address is <IP-2>
+Filename '<项目A>_NOR_ALL.bin'.
 Loading: ##########################...（16MB）
 2 MiB/s
 done
@@ -74,7 +74,7 @@ exit code = 1。
 全擦（0x1000000）清空 env 分区后，设备无 DHCP 配置，使用固件内置默认静态 IP：
 
 ```
-eth cfg: IFACE=eth0 IP=192.168.5.100 MASK=255.255.255.0 GW=192.168.5.1
+eth cfg: IFACE=eth0 IP=<IP-3> MASK=255.255.255.0 GW=<IP-4>
 ```
 
 主机在 172.17.151.x 网段，设备在 192.168.5.x 网段，不在同一网段 -> ping 不通 -> ADB 无法连接。
@@ -85,7 +85,7 @@ eth cfg: IFACE=eth0 IP=192.168.5.100 MASK=255.255.255.0 GW=192.168.5.1
 
 1. 串口敲回车确认 `70mai login:` 出现（烧录成功标志）
 2. 串口登录（root + 空密码）
-3. `ifconfig eth0` 确认 IP（可能为默认 192.168.5.100）
+3. `ifconfig eth0` 确认 IP（可能为默认 <IP-3>）
 4. 配置网络：`ifconfig eth0 <主机同网段IP> netmask 255.255.255.0` 或等待 DHCP
 5. 主机 `adb connect <设备IP>:5555`
 6. `adb shell cat /proc/uptime` 确认 uptime 很小（几十秒，刚重启）

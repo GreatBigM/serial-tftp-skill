@@ -2,15 +2,15 @@
 
 ## 反模式 1: TFTP 失败后不看环境变量就盲改
 
-**场景:** C14 编译后烧录 HM6502，mai_tftp 持续 `Loading: T T T` 超时。
+**场景:** C14 编译后烧录 <项目A>，mai_tftp 持续 `Loading: T T T` 超时。
 
 **错误做法:** 反复 setenv、修改主机网络、换脚本路径、加 IP 别名，连 `printenv` 看一眼当前配置都没做。浪费 8 轮尝试。
 
 **正确做法:**
 1. Ctrl+C 打断 TFTP（可行！不是死循环）
 2. `printenv` 查看 ipaddr/serverip/gatewayip
-3. 发现 `ipaddr=192.168.2.200`，`serverip=172.17.151.6` → 跨子网
-4. 主机加 gateway IP 别名: `sudo ip addr add 172.17.150.1/32 dev enp2s0`
+3. 发现 `ipaddr=<IP-1>`，`serverip=<IP-2>` → 跨子网
+4. 主机加 gateway IP 别名: `sudo ip addr add <IP-3>/32 dev enp2s0`
 5. 重新 `mai_tftp` → 成功
 
 **教训:** 先诊断后行动。`printenv` 是最基本的诊断命令，不要跳过。

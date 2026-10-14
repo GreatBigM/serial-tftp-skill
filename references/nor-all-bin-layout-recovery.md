@@ -2,7 +2,7 @@
 
 ## 背景
 
-2026-07-03 HM6502 会话：手动将新 squashfs 替换进 NOR_ALL.bin 后，分区边界偏移被破坏，
+2026-07-03 <项目A> 会话：手动将新 squashfs 替换进 NOR_ALL.bin 后，分区边界偏移被破坏，
 U-Boot bootcmd 默认从 slot B (0x800000) 读内核失败。通过 `printenv` + 手动 `sf read + bootm`
 从 slot A (0x290000) 成功启动。
 

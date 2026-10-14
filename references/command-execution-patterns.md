@@ -24,7 +24,7 @@ s.write(b'\r'); time.sleep(1)
 buf = read_all(s, 3).decode(errors='replace').lower()
 
 if len(buf) == 0:           mode = 'DEAD'
-elif any(p in buf for p in ['prj009#','=>','hm6502#']): mode = 'UBOOT'
+elif any(p in buf for p in ['prj009#','=>','<项目A>#']): mode = 'UBOOT'
 elif 'login:' in buf:       mode = 'LOGIN'
 elif any(p in buf for p in ['root@','# ','$ ']): mode = 'SHELL'
 else:                       mode = 'NOISE'
@@ -38,7 +38,7 @@ else:                       mode = 'NOISE'
 | SHELL | **直接发命令，不要再发 root** |
 | NOISE | 等 5s 重试，或看门狗复位 |
 
-### SHELL 误判陷阱（2026-07-27 HM6502 实踩）
+### SHELL 误判陷阱（2026-07-27 <项目A> 实踩）
 
 症状：发 `root\r` 回显 `-sh: root: not found`，反复"登录失败"。
 根因：设备已在 `[root@70mai:]$` 下，`root` 被当 shell 命令执行。
@@ -54,7 +54,7 @@ else:                       mode = 'NOISE'
 | `which` / `command -v` | 很多系统没有 | `ls /usr/bin/wp* /bin/wp*` |
 | `test -x /path` | 可以误判（文件存在但不可执行） | 配合 `ls -la` 验证 |
 | `ip addr show` | busybox applet 可能缺 | 用 `ifconfig` 替代 |
-| `timeout` / `head` 命令 | **精简 busybox 可能没有（2026-08-08 HM6502 实踩：busybox 无 timeout applet，无 head）** | 用工具自带退出条件（如 `tcpdump -c N` 抓满即退）或后台 + sleep + kill 兜底 |
+| `timeout` / `head` 命令 | **精简 busybox 可能没有（2026-08-08 <项目A> 实踩：busybox 无 timeout applet，无 head）** | 用工具自带退出条件（如 `tcpdump -c N` 抓满即退）或后台 + sleep + kill 兜底 |
 | 一次 send 长命令 | > 80 字符被截断 | 写脚本文件再执行 |
 | `echo "long body" > /tmp/s.sh` | 长 body 中引号/特殊字符被吞 | 拆多个 `echo >>` 拼接，或用 Python 控制 |
 
@@ -147,7 +147,7 @@ cmd += "ls /usr/bin/iperf* /usr/sbin/iperf* /tmp/iperf* /tmp/i3 2>&1"
 # 用脚本隔离法执行
 ```
 
-### 3.2 已知实际路径（HM6502）
+### 3.2 已知实际路径（<项目A>）
 
 | 二进制 | 实际路径 |
 |--------|---------|
@@ -161,7 +161,7 @@ cmd += "ls /usr/bin/iperf* /usr/sbin/iperf* /tmp/iperf* /tmp/i3 2>&1"
 ```bash
 echo $PATH
 ```
-HM6502 典型值：`/system/bin:/bin:/sbin:/usr/bin:/usr/sbin`
+<项目A> 典型值：`/system/bin:/bin:/sbin:/usr/bin:/usr/sbin`
 
 ## 五、已知 Busybox 行为
 
@@ -198,6 +198,6 @@ HM6502 典型值：`/system/bin:/bin:/sbin:/usr/bin:/usr/sbin`
 
 ## 七、参考文件
 
-- `references/working-python-patterns.md` — 经过 HM6502 实际验证的 Python 模板（login、script write/run/cat、binary discovery、iperf3 background、stty reset 完整模式）
+- `references/working-python-patterns.md` — 经过 <项目A> 实际验证的 Python 模板（login、script write/run/cat、binary discovery、iperf3 background、stty reset 完整模式）
 - `references/echo-to-serial-workflow.md` — echo-to-serial 替代法：用 `echo -ne 'cmd\r' > /dev/ttyUSB0` 发命令 + 后台 capture.log 读结果，完全绕过 pyserial 竞态冲突
 - `scripts/serial_login_ip.py` — 精确时序登录+查 IP 一体脚本（root+空密码，日志洪流环境可用，2026-08-04 验证）

@@ -1,4 +1,4 @@
-# HM6502 开发环境网络配置
+# <项目A> 开发环境网络配置
 
 > 开发时设备通过有线直连宿主机，需要配同网段 IP + 网关 + DNS
 
@@ -6,15 +6,15 @@
 
 ```bash
 # 给宿主网口加一个同网段 IP（如果还没配）
-sudo ip addr add 172.17.151.6/23 dev enp2s0
+sudo ip addr add <IP-1>/23 dev enp2s0
 ```
 
 ## 设备端（串口）
 
 ```bash
 # 登录 root，密码为空
-ifconfig eth0 172.17.151.200 netmask 255.255.254.0 up
-route add default gw 172.17.150.1
+ifconfig eth0 <IP-2> netmask 255.255.254.0 up
+route add default gw <IP-3>
 echo "nameserver 223.5.5.5" > /etc/resolv.conf
 adbd &
 ```
@@ -22,8 +22,8 @@ adbd &
 ## 验证
 
 ```bash
-ping 172.17.151.200         # 宿主机→设备通
-adb connect 172.17.151.200:5555
+ping <IP-2>         # 宿主机→设备通
+adb connect <IP-2>:5555
 adb shell ping baidu.com    # 设备能出外网
 ```
 
