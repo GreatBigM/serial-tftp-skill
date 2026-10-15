@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.10
+version: 2.0.11
 category: devops
 metadata:
   agent:
@@ -330,7 +330,7 @@ ser.close()
 **高频坑**
 - 只设 `ipaddr/serverip` → env 残留 `gatewayip=<IP-5>` → `sending through gateway <IP-5>` + `T T T`（serverip 与设备不同网段）
 - `mai_tftp` 无参走 CPSPR 解码 IP；CPSPR 空 → 兜底 <IP-6> → fetch 失败却像成功（**假阳性**）；脚本已改显式 `mai_tftp auto_update_tftp.txt` + 失败标记判负（`Retry count exceeded`/`Abort`/`No ethernet found`/`T T T`）+ 成功须见 `bytes written`
-- **CPSPR 触发在本机 U-Boot 不可靠**（解锁→写→锁定→reboot 仍正常引导）；主路径 = 断电冷启动 + 上电瞬间连打 CR 抢 U-Boot
+- **CPSPR 触发可用性随内核变化**（判据 = 内核是否带 `AF_SIGNATURE` 保护，与成对 skill `adb-tftp` 同口径）：无保护内核解锁→写→锁定→reboot 仍正常引导（不进 TFTP）；带保护内核（2026-09-18 修复）实测 `Mod: CPSPR = 0x97060909` 活过 reboot ⇒ **换内核/换镜像必重测**。稳妥主路径仍 = 断电冷启动 + 上电瞬间连打 CR 抢 U-Boot。依据：qwiki `projects/<项目A>_wifi/20260918-cpspr-af-signature-515-regression.md`
 - GMAC 只由 `mai_tftp` 初始化：先单独 `ping`/`tftpboot` 会 `No ethernet found`
 - 温重启挂死（负载态）会截断"reboot → 抢 U-Boot"路径 → 必须断电冷启动
 - **非 shell 状态禁止盲发命令**：login 提示符下命令会被当用户名（一串 `Login incorrect`），先发 CR 判模式
