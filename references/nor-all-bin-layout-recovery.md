@@ -10,7 +10,7 @@ U-Boot bootcmd 默认从 slot B (0x800000) 读内核失败。通过 `printenv` +
 
 ### 1. 进入 U-Boot 后查看分区布局
 
-在 `PRJ009#` 或 `=>` 提示符下：
+在 `<项目E>#` 或 `=>` 提示符下：
 
 ```
 printenv

@@ -9,17 +9,17 @@
 ```bash
 # 在宿主对比三处 MD5
 echo "=== Build output (driver/) ==="
-md5sum out/image_<项目A>/.tmp/driver/tx-isp-PRJ009.ko
+md5sum out/image_<项目A>/.tmp/driver/tx-isp-<项目E>.ko
 
 echo "=== Staging (system_b/) ==="
-md5sum out/image_<项目A>/.tmp/system_b/lib/modules/tx-isp-PRJ009.ko
+md5sum out/image_<项目A>/.tmp/system_b/lib/modules/tx-isp-<项目E>.ko
 
 echo "=== Packed (system_b.img) ==="
-unsquashfs -f -d /tmp/sys_check out/image_<项目A>/system_b.img lib/modules/tx-isp-PRJ009.ko 2>/dev/null
-md5sum /tmp/sys_check/lib/modules/tx-isp-PRJ009.ko
+unsquashfs -f -d /tmp/sys_check out/image_<项目A>/system_b.img lib/modules/tx-isp-<项目E>.ko 2>/dev/null
+md5sum /tmp/sys_check/lib/modules/tx-isp-<项目E>.ko
 
 echo "=== Device ==="
-adb shell md5sum /system/lib/modules/tx-isp-PRJ009.ko
+adb shell md5sum /system/lib/modules/tx-isp-<项目E>.ko
 ```
 
 ## 修复方法

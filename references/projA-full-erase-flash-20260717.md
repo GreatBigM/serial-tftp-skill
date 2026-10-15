@@ -2,7 +2,7 @@
 
 ## 背景
 
-OpenSpec change `zero-copy-yuv-to-ai` 需要烧录新固件验证。设备此前 c_mi_ipc 崩溃后处于半死状态（reboot 返回 I/O error），物理断电重新上电后停在 U-Boot（PRJ009#）。
+OpenSpec change `zero-copy-yuv-to-ai` 需要烧录新固件验证。设备此前 c_mi_ipc 崩溃后处于半死状态（reboot 返回 I/O error），物理断电重新上电后停在 U-Boot（`<项目E>#`）。
 
 ## 波特率纠正
 
@@ -21,7 +21,7 @@ skill 原记录 <项目A> 串口波特率 1500000（1.5M），**实际为 921600
 python3 scripts/auto-uboot-interrupt.py flash --baud 921600 --at-uboot
 ```
 
-设备已在 U-Boot（PRJ009#），用 `--at-uboot` 跳过登录+reboot 步骤。
+设备已在 U-Boot（`<项目E>#`），用 `--at-uboot` 跳过登录+reboot 步骤。
 
 ## 烧录过程（串口日志关键节点）
 
@@ -62,7 +62,7 @@ exit code = 1。
 [    8.507336] ISP driver's version is H20260708a
      tx-isp-probe ok (fw:H20260708a drv:H20260608a build:Jul 16 2026 15:34:34)
 [    8.705676] [env] User and User Back OK!
-70mai login:
+login:
 ```
 
 根因：全片 16MB erase+write 耗时长于脚本的 post-flash 监控超时。脚本提前退出，但 U-Boot 的 mai_tftp 继续完成擦写 + reset。
@@ -77,13 +77,13 @@ exit code = 1。
 eth cfg: IFACE=eth0 IP=<IP-3> MASK=255.255.255.0 GW=<IP-4>
 ```
 
-主机在 172.17.151.x 网段，设备在 192.168.5.x 网段，不在同一网段 -> ping 不通 -> ADB 无法连接。
+宿主机在 `<宿主网段>`、设备在 `<设备网段>`（不同网段）-> ping 不通 -> ADB 无法连接。
 
 需通过串口登录后手动配置网络，或等待 DHCP 服务可达。
 
 ## 验证清单（全擦后）
 
-1. 串口敲回车确认 `70mai login:` 出现（烧录成功标志）
+1. 串口敲回车确认 `login:` 出现（烧录成功标志）
 2. 串口登录（root + 空密码）
 3. `ifconfig eth0` 确认 IP（可能为默认 <IP-3>）
 4. 配置网络：`ifconfig eth0 <主机同网段IP> netmask 255.255.255.0` 或等待 DHCP

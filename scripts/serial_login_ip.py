@@ -48,7 +48,7 @@ print(f"  用户名后: {buf[-60:]!r}")
 # 4. 发空密码（不是 root！）
 ser.write(b'\r')
 time.sleep(1.5)
-buf = read_until([b'root@70mai', b'incorrect', b'login:', b'#'], timeout=6)
+buf = read_until([b'root@', b'incorrect', b'login:', b'#'], timeout=6)
 print(f"  密码后: {buf[-60:]!r}")
 
 # 5. 查 eth0 IP

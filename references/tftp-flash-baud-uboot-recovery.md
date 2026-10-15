@@ -20,9 +20,9 @@ stty -F /dev/ttyUSB0 921600 raw
 echo -ne '\r' > /dev/ttyUSB0; sleep 0.5; cat /dev/ttyUSB0 | head -3
 ```
 
-- 看到 `PRJ009#` -> 设备已在 U-Boot -> 重跑脚本加 `--at-uboot`
-- 看到 `70mai login:` -> 设备仍在 Linux -> 重跑脚本不加参数
-- 看到 `root@70mai` -> 已登录 -> 直接 reboot 后重跑
+- 看到 `<项目E>#` -> 设备已在 U-Boot -> 重跑脚本加 `--at-uboot`
+- 看到 `login:` -> 设备仍在 Linux -> 重跑脚本不加参数
+- 看到 `root@<设备主机名>` -> 已登录 -> 直接 reboot 后重跑
 
 ## TFTP 全量烧录擦除 /tmp
 
@@ -39,8 +39,8 @@ NOR 全片擦写（`sf erase 0x0 0xef0000`）后，设备 tmpfs 中所有文件�
 
 - <项目A> auto-uboot-interrupt.py 默认 115200 -> 串口无回显
 - 改为 `--baud 921600` -> 脚本检测到 Linux 模式、reboot 成功
-- 但脚本报 `Failed to interrupt U-Boot` - 实际设备已在 PRJ009#
-- 手动验证串口看到 PRJ009# -> `--at-uboot` 参数成功烧录
+- 但脚本报 `Failed to interrupt U-Boot` - 实际设备已在 `<项目E>#`
+- 手动验证串口看到 `<项目E>#` -> `--at-uboot` 参数成功烧录
 - 烧录后 iperf/脚本均不在设备上 -> 需 HTTP 推送
 - 烧录后 **wlan0 无 IP**（RX/TX=0，`ifconfig` 无 inet addr）- algo 分区被擦除，WiFi 配置丢失。必须通过 Mi Home App 重新配网才能测无线吞吐。
 

@@ -10,7 +10,7 @@
 
 1. 物理断电 → 重新上电
 2. 立即在串口持续发送回车（覆盖 U-Boot 的 ~1s bootdelay）
-3. 如果看到 `PRJ009#` 提示符 → 用 `--at-uboot` 参数全量烧录：
+3. 如果看到 `<项目E>#` 提示符 → 用 `--at-uboot` 参数全量烧录：
    ```bash
    python3 auto-uboot-interrupt.py flash --at-uboot
    ```

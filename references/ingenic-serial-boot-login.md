@@ -1,5 +1,5 @@
 ---
-name: ingenic-adb-debug
+name: ingenic-serial-boot-login
 description: Ingenic 平台调试环境建立 — 串口盲打登录 → 查 DHCP IP → ADB 连接
 category: devops
 metadata:
@@ -14,7 +14,7 @@ metadata:
 ## 适用平台
 
 - <项目A>（T32 MIPS）
-- <项目E>（T32 PRJ009）
+- <项目E>（T32）
 - 其他 Ingenic T32 平台（Linux shell + adbd 自启）
 
 ## 前置条件
@@ -87,9 +87,9 @@ txt = buf.decode(errors='replace').lower()
 
 if len(buf) == 0:
     mode = 'DEAD'        # 设备断电/线松
-elif any(p in txt for p in ['prj009#','<项目A>#','<项目E>#','=>']):
+elif any(p in txt for p in ['<项目E>#','<项目A>#','=>']):
     mode = 'UBOOT'       # U-Boot 提示符
-elif any(p in txt for p in ['login:','70mai login']):
+elif any(p in txt for p in ['login:']):
     mode = 'LOGIN'       # Linux 未登录
 elif any(p in txt for p in ['root@','# ','$ ']):
     mode = 'SHELL'       # Linux 已登录
@@ -107,13 +107,13 @@ else:
 
 ## 一、标准流程
 
-> 串口盲打登录、日志洪流处理、查 IP 的基础方法详见 `serial-debug` 技能。本节仅列出 Ingenic 平台特化内容。
+> 串口盲打登录、日志洪流处理、查 IP 的基础方法详见 `references/serial-debug-diagnostics.md`（连接建立）与 `references/command-execution-patterns.md`（命令执行）。本节仅列出 Ingenic 平台特化内容。
 
 ### 1.1 串口盲打登录（密码 fallback）
 
-> 基础盲打登录方法见 `serial-debug`。Ingenic 平台特化：密码兼容性。
+> 基础盲打登录方法见 `references/command-execution-patterns.md`。Ingenic 平台特化：密码兼容性。
 
-70mai/Smart 系列设备密码策略：
+<厂商> 系列设备密码策略：
 - 旧固件：空密码（直接回车）
 - 新固件：`root`/`root`
 - 先试空密码，失败后用 `root`/`root` 重试
@@ -136,7 +136,7 @@ if not try_login(b"\n"):
 
 ### 1.2 查 DHCP IP（不杀日志）
 
-> 文件重定向法和 Marker 包裹法详见 `serial-debug`。Ingenic 平台用同样的方法查 `ifconfig eth0` 的 `inet addr:` 字段。
+> 文件重定向法和 Marker 包裹法详见 `references/command-execution-patterns.md`。Ingenic 平台用同样的方法查 `ifconfig eth0` 的 `inet addr:` 字段。
 
 ### 1.3 ADB 连接
 
@@ -151,7 +151,7 @@ ADB 连接成功后即可进行内核/应用调试。
 
 ## 二、日志洪流进阶
 
-> 日志洪流下的循环 retry 登录、盲打 burst 模式详见 `serial-debug`。
+> 日志洪流下的循环 retry 登录、盲打 burst 模式详见 `references/command-execution-patterns.md`。
 
 ### 极端日志洪流（c_mi_ipc 视频流日志）
 
@@ -174,7 +174,7 @@ for attempt in range(10):
 
 ## 三、ADB 后台进程 SIGHUP 问题
 
-> 详细的 ADB SIGHUP 陷阱和解决方案见 `serial-debug`。要点：`adb shell 'cmd &'` 启动的后台进程在 ADB 断开后被 SIGHUP 杀。解决：通过串口启动后台进程（串口 shell 子进程不被 SIGHUP 影响）。
+> 详细的 ADB SIGHUP 陷阱和解决方案见 `references/ingenic-isp-sensor-debug.md`（§ADB SIGHUP vs Serial Shell）。要点：`adb shell 'cmd &'` 启动的后台进程在 ADB 断开后被 SIGHUP 杀。解决：通过串口启动后台进程（串口 shell 子进程不被 SIGHUP 影响）。
 
 ## 四、常见问题
 
@@ -203,7 +203,7 @@ for attempt in range(10):
 
 ## 五、ADB 离线恢复
 
-> ADB 离线恢复方法详见 `serial-debug`。快速恢复：`adb kill-server && adb connect <IP>:5555`。仍不通时串口重启 adbd。
+> ADB 离线恢复方法见本文 §六（ADB 降级方案 — HTTP 推送）。快速恢复：`adb kill-server && adb connect <IP>:5555`。仍不通时串口重启 adbd。
 
 ## 六、ADB 降级方案 — HTTP 推送（mihomo TUN 拦截时用）
 
@@ -258,7 +258,6 @@ ser.write(b'/tmp/<binary> > /tmp/<log> 2>&1 &\nsleep 4\ncat /tmp/<log>\n')
 
 ## 八、相关技能
 
-- `<项目A>-build-flash-test` — <项目A> 编译/烧录/ADB/iperf3 全流程（含 eth0 优先策略）
 - `serial-tftp` — TFTP 烧录 + switch_mode debug
 - `bench-device-performance` — 性能/内存基线采集
 

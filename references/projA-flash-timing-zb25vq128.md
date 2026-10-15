@@ -4,7 +4,7 @@
 
 ## 设备信息
 
-- 项目: <项目A> (Ingenic T32, PRJ009)
+- 项目: <项目A> (Ingenic T32)
 - Flash IC 实测: **ZB25VQ128** (不是 doc 中的 EN25QX128A)
 - 串口波特率: 921600
 - 固件大小: 16777216 bytes (16MB, 0x1000000)
@@ -45,5 +45,5 @@ ZB25VQ128 是 Zbit Semiconductor 的 16MB SPI NOR Flash，与 EN25QX128A (EON) �
 
 1. 脚本 exit code 1 "Login prompt not detected" 可能在**部分擦**时也出现（非仅全擦超时），根因是固件串口日志刷屏
 2. 确认烧录成功的方法: 串口日志中出现新固件的 U-Boot 启动 → kernel 启动 → c_mi_ipc 应用日志
-3. `--at-uboot` 恢复路径可靠: 设备在 PRJ009# 时的烧录完全正常
+3. `--at-uboot` 恢复路径可靠: 设备在 `<项目E>#` 时的烧录完全正常
 4. 擦除 15.6MB 需要 ~36s，写入需 ~60s+ — post-flash 监控超时应适当放宽

@@ -75,8 +75,8 @@ with open(fpath, 'wb') as f:
 
 reboot 压测与「抢 U-Boot 烧录」目的相反——**压测期间绝不能敲键**，否则把设备钉在 U-Boot 提示符上：
 
-1. **reboot 后到 `70mai login:` 出现前一律纯读**：内核 reboot 置 warm 标志 `CPSPR=0x3535` → U-Boot bootdelay 缩到 ~1s，**任何写入字节都打断 autoboot → 设备停在 `PRJ009#`**（现象像"卡在 boot"，需手敲 `boot` 或冷启动）。压测循环里唯一允许的写入（login 的 `\r`）必须等 login 提示出现后再发。
-2. **启动判定不得匹配 shell 回显**：发 `reboot` 后第一段输出含自身命令行回显 `[root@70mai:tmp]$ reboot`，拿它当"起来了" = **假 OK**（曾骗过首版脚本）。正确判据：见 `70mai login:` 或 `Linux version`，且要求本轮确实见过 `Restarting system|U-Boot 20` 才算真 reboot。
+1. **reboot 后到 `login:` 出现前一律纯读**：内核 reboot 置 warm 标志 `CPSPR=0x3535` → U-Boot bootdelay 缩到 ~1s，**任何写入字节都打断 autoboot → 设备停在 `<项目E>#`**（现象像"卡在 boot"，需手敲 `boot` 或冷启动）。压测循环里唯一允许的写入（login 的 `\r`）必须等 login 提示出现后再发。
+2. **启动判定不得匹配 shell 回显**：发 `reboot` 后第一段输出含自身命令行回显 `[root@<设备主机名>:tmp]$ reboot`，拿它当"起来了" = **假 OK**（曾骗过首版脚本）。正确判据：见 `login:` 或 `Linux version`，且要求本轮确实见过 `Restarting system|U-Boot 20` 才算真 reboot。
 3. **状态不跨 reboot**：① 会话会丢——每轮先重登，否则 `reboot` 被当 login 用户名 → `Password` 提示 → 白等 60s 超时（曾被记成"OK 62s"）；② `/tmp` 是 tmpfs——`iperf3` 每轮消失，`[ -x /tmp/iperf3 ] || wget` 必须每轮执行，否则静默退化成"关联态"而非"负载态"（症状 `-sh: /tmp/iperf3: not found`）。
 
 参考脚本：`/tmp/r2_stress.py`（负载态压测 v2）、`/tmp/r2_flash2.py`（从 shell 抓 U-Boot 版）、`/tmp/r2_regress.py`（空载+吞吐+rmmod+dmesg）。
@@ -90,5 +90,5 @@ reboot 压测与「抢 U-Boot 烧录」目的相反——**压测期间绝不能
 5. **每步自证**：登录后 `echo MARK` 回读、参数写入后回读、命令输出非空、`uptime` 单调 —— 这一节与上面「三禁」是同一件事的两面：**没有回读就没有事实**（"脚本跑完了/测试通过了"必须由返回内容证明，不能由脚本没报错推断）。
 
 ## 参考
-- `serial-debug` skill — 通用串口交互
+- `references/serial-debug-diagnostics.md` / `references/command-execution-patterns.md` — 通用串口交互（连接建立 / 命令执行）
 - `<项目A>-stress-test` skill — 压力测试上下文

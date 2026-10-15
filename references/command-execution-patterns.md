@@ -1,5 +1,5 @@
 ---
-name: serial-debug
+name: command-execution-patterns
 description: Reliable patterns for executing commands on embedded Linux devices over raw serial (busybox) — script isolation, binary discovery, output capture in log-flooded environments.
 category: devops
 metadata:
@@ -10,7 +10,7 @@ metadata:
 # Embedded Serial Command Execution
 
 > Reliable patterns for running commands on embedded Linux over raw serial.
-> Complements `serial-debug` (connection) and `debug-playbook` (pitfalls).
+> 配套读：连接建立与故障排查见 `references/serial-debug-diagnostics.md`；本节只讲命令执行。
 > These skills are manually authored; this skill captures patterns that belong there but cannot be directly patched.
 
 ## 零、第一步：发 CR 判断设备当前模式（必做）
@@ -24,7 +24,7 @@ s.write(b'\r'); time.sleep(1)
 buf = read_all(s, 3).decode(errors='replace').lower()
 
 if len(buf) == 0:           mode = 'DEAD'
-elif any(p in buf for p in ['prj009#','=>','<项目A>#']): mode = 'UBOOT'
+elif any(p in buf for p in ['<项目E>#','=>','<项目A>#']): mode = 'UBOOT'
 elif 'login:' in buf:       mode = 'LOGIN'
 elif any(p in buf for p in ['root@','# ','$ ']): mode = 'SHELL'
 else:                       mode = 'NOISE'
@@ -41,7 +41,7 @@ else:                       mode = 'NOISE'
 ### SHELL 误判陷阱（2026-07-27 <项目A> 实踩）
 
 症状：发 `root\r` 回显 `-sh: root: not found`，反复"登录失败"。
-根因：设备已在 `[root@70mai:]$` 下，`root` 被当 shell 命令执行。
+根因：设备已在 `[root@<设备主机名>:]$` 下，`root` 被当 shell 命令执行。
 教训：**跳过 CR 检测直接盲打是反模式。** SHELL 模式下直接发命令。
 
 ## 一、核心原则

@@ -62,8 +62,8 @@ def login_precise(ser):
     # 3. 发空密码（关键：密码是空，不是 root）
     ser.write(b'\r')
     time.sleep(1.5)
-    buf = read_until(ser, [b'root@70mai', b'incorrect', b'login:', b'#'], timeout=6)
-    return b'root@70mai' in buf or buf.rstrip().endswith(b'$') or b'#' in buf
+    buf = read_until(ser, [b'root@', b'incorrect', b'login:', b'#'], timeout=6)
+    return b'root@' in buf or buf.rstrip().endswith(b'$') or b'#' in buf
 
 # 日志洪流降噪（login 被刷屏淹没时先杀日志进程）:
 # ser.write(b'killall -9 apphilogcat c_mi_ipc miio_client 2>/dev/null\r')
@@ -72,7 +72,7 @@ def login_precise(ser):
 **要点**：
 - **密码是空密码**，不是 root/root——第二次 `root\r` 会被当 shell 命令执行（`-sh: root: not found`）或导致 `Login incorrect`
 - 每个发送之间必须有足够 sleep + read_until 等待回显，命令不能连发（getty 缓冲错位）
-- 登录失败会回 `70mai login:` 提示符，可重试（先等提示符再发）
+- 登录失败会回 `login:` 提示符，可重试（先等提示符再发）
 - 日志洪流（MikeInit 每 ~300ms 刷屏）严重干扰登录：先 `killall -9 apphilogcat c_mi_ipc miio_client` 降噪
 - 完整可运行脚本：`/tmp/serial_login_ip.py`（会话中验证通过，登录+查 IP 一体）
 
@@ -153,7 +153,7 @@ time.sleep(0.3)
 | Baud | 921600 |
 | Line terminator | `\r` (CR only, NOT `\n`) |
 | Shell | busybox ash |
-| Default shell prompt | `[root@70mai:]$ ` |
+| Default shell prompt | `[root@<设备主机名>:]$ ` |
 | IP cmd | `ifconfig` (busybox applet, not `ip`) |
 | PATH | `/system/bin:/bin:/sbin:/usr/bin:/usr/sbin` |
 | wpa_supplicant | `/usr/bin/wpa_supplicant` |

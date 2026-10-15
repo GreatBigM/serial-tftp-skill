@@ -30,12 +30,12 @@ python3 auto-uboot-interrupt.py flash --baud 921600
 ```
 python3 -c "import serial, time; ...
 s.write(b'\r\n')
-# 返回: \r\nPRJ009# \r\nPRJ009#
+# 返回: \r\n<项目E># \r\n<项目E>#
 ```
 
 设备实际已在 U-Boot 提示符下！脚本的 reboot 触发成功（设备重启进入了 U-Boot），但脚本的 ~12s 回车洪流未覆盖到 U-Boot 的 ~1s bootdelay 窗口，超时退出。
 
-**正确断定：** 脚本 exit code 1 + 串口 PRJ009# → 设备在 U-Boot → 直接 `--at-uboot` 重试，不要断电，不要放弃。
+**正确断定：** 脚本 exit code 1 + 串口 `<项目E>#` → 设备在 U-Boot → 直接 `--at-uboot` 重试，不要断电，不要放弃。
 
 ### 尝试 2: --at-uboot flash（成功）
 
@@ -62,7 +62,7 @@ python3 auto-uboot-interrupt.py flash --at-uboot --baud 921600
 
 ## 关键教训
 
-1. **`Failed to interrupt U-Boot` 不是失败，是信号。** 不要放弃，先看串口。PRJ009# 存在则设备状态正确，直接 `--at-uboot`。
+1. **`Failed to interrupt U-Boot` 不是失败，是信号。** 不要放弃，先看串口。`<项目E>#` 存在则设备状态正确，直接 `--at-uboot`。
 
 2. **部分擦（`0xef0000`）保留 env，但 DHCP 仍可能换 IP。** 不要假设保留 env 就能维持旧 IP。全擦和部分擦后都必须用串口确认新 IP。
 

@@ -45,16 +45,19 @@ curl -fsSL https://gitee.com/GreatBigM/serial-tftp-skill/raw/main/install.sh | b
 ## 目录结构
 
 ```
-├── SKILL.md              # 技能定义（五步烧录流程）
-├── scripts/
-│   ├── flash_config.py   # 统一配置管理
-│   ├── auto-uboot-interrupt.py  # 烧录主脚本
+├── SKILL.md              # 技能定义（五步烧录流程 + 参考资料清单）
+├── CHANGELOG.md          # 版本历史（版本号单一真相源 = SKILL.md frontmatter 的 version）
+├── scripts/              # 9 个运行脚本 + 发布闸门 publish-check.py 与 hooks/（见 SKILL.md「脚本入口」）
+│   ├── serial-tftp       # 统一入口 wrapper（flash/setup/config/cmd/capture/reboot-capture/stress/shell）
+│   ├── auto-uboot-interrupt.py  # 烧录主脚本（含 setup / config）
+│   ├── flash_config.py   # 统一配置管理 + 环境预检
 │   ├── serial_cmd.py     # 串口命令工具
+│   ├── serial_login_ip.py       # 精确时序登录 + 查 IP
+│   ├── serial_compat.py  # pyserial 兼容层（无 pyserial 时零依赖替代）
 │   ├── capture_boot_log.py      # 启动日志采集
 │   ├── reboot_capture.py        # 循环重启采集
 │   └── reboot-stress.py         # 重启压力测试
-├── references/
-│   └── serial-console-notes.md  # 串口经验笔记
+├── references/           # 34 个参考资料（逐条清单见 SKILL.md「参考资料」）
 ├── install.sh
 └── README.md
 ```

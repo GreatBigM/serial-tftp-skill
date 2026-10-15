@@ -35,7 +35,7 @@
 
 **正确做法应该：**
 1. 读 script Usage → 发现已有 `--at-uboot` 参数用于设备已在 U-Boot 的场景
-2. 确认设备状态：串口敲回车看返回 — `PRJ009#` 表示已在 U-Boot
+2. 确认设备状态：串口敲回车看返回 — `<项目E>#` 表示已在 U-Boot
 3. 用正确参数重试：`python3 auto-uboot-interrupt.py flash --at-uboot`
 4. 如果 `--at-uboot`也失败 → 查脚本源码分析失败根因
 5. 修脚本（补充模式检测逻辑）→ commit → 再试

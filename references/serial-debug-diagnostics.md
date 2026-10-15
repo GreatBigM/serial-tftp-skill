@@ -1,5 +1,5 @@
 ---
-name: serial-debug
+name: serial-debug-diagnostics
 description: 嵌入式设备串口连接建立与故障排查 — 无输出/日志洪流/命令截断/login丢失的完整诊断流程
 category: devops
 metadata:
@@ -9,7 +9,7 @@ metadata:
 
 # 串口连接建立与故障排查
 
-> 故障诊断聚焦。完整操作参考见 `serial-debug`。
+> 故障诊断聚焦。命令执行模式（脚本隔离/二进制发现/输出捕获）见 `references/command-execution-patterns.md`。
 
 ## 一、故障诊断决策树
 

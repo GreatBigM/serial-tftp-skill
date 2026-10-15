@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.6
+version: 2.0.9
 category: devops
 metadata:
   agent:
@@ -121,8 +121,8 @@ sudo systemctl restart tftpd-hpa && sudo systemctl enable tftpd-hpa
 
 | 项目 | 波特率 |
 |------|--------|
-| <项目> | 115200 |
-| <项目> | **921600** |
+| `<项目E>` | 115200 |
+| `<项目A>` | **921600** |
 
 管理：`config baud [值|reset|detect]`
 
@@ -160,7 +160,7 @@ ping 验证默认开启（`--no-ping` 跳过，同时跳过 IP 冲突预检）�
 **写 U-Boot 的纪律（踩过坑）**：一律用 `uboot_cmd(ser, cmd)` —— 真正的 `\r` 只在它内部拼，
 写前 `reset_input_buffer()`，读回以提示符 `#` 为界。历史上 IP 冲突预检把 `\r` 写成字面反斜杠+r，
 U-Boot 收不到 CR ⇒ 命令不执行、文本堆在输入缓冲里直到下一条真 CR 才被一起结清
-（现场：`PRJ009# ping A\rping A\rping B` 粘成一行）。
+（现场：`<项目E># ping A\rping A\rping B` 粘成一行）。
 
 ---
 
@@ -199,8 +199,8 @@ config reset             # 清除全部
 
 | 项目 | TFTP 目录 | 设备 IP | 擦除范围 | 波特率 |
 |------|-----------|---------|---------|--------|
-| <项目> | `<TFTP_DIR>` | <DEV_IP> | 0x1000000（全） | 115200 |
-| <项目> | `<TFTP_DIR>` | <DEV_IP> | 0xf60000（部分）/ 0x1000000 | **921600** |
+| `<项目E>` | `<TFTP_DIR>` | <DEV_IP> | 0x1000000（全） | 115200 |
+| `<项目A>` | `<TFTP_DIR>` | <DEV_IP> | 0xf60000（部分）/ 0x1000000 | **921600** |
 
 ---
 
@@ -230,6 +230,7 @@ reset
 | `flash_config.py` | 统一配置管理 + 环境预检（`~/.config/serial-tftp/config.json`） |
 | `serial_login_ip.py` | 精确时序登录 + 查 IP（日志洪流环境实测） |
 | `serial_compat.py` | pyserial 兼容层（无 pyserial 时零依赖替代） |
+| `publish-check.py` | 发布前脱敏闸门（自带 `--self-test`）；随 `scripts/` 一并安装，仅供本仓维护者使用，日常烧录不涉及 |
 
 所有脚本共享配置缓存，波特率自动复用。
 
@@ -263,7 +264,7 @@ reset
 
 ### 盲打登录
 
-用户 `root`，密码为空（直接回车）。设备日志可能持续淹没提示符，登录前先 drain。
+用户 `root`，密码**按固件版本**：旧版为空（直接回车），新版 `root`/`root`——**先用空密码，失败再试 `root`/`root`**。设备日志可能持续淹没提示符，登录前先 drain。
 
 ```python
 import serial, time
@@ -273,7 +274,7 @@ time.sleep(0.3); ser.reset_input_buffer()
 ser.write(b'\r\n'); time.sleep(1.5)   # 唤醒
 ser.read(ser.in_waiting)              # drain noise
 ser.write(b'root\r'); time.sleep(0.5)
-ser.write(b'\r'); time.sleep(0.5)      # 密码为空：直接回车
+ser.write(b'\r'); time.sleep(0.5)      # 密码按固件版本：旧固件为空 → 直接回车；新固件发 b'root\r'
 data = ser.read(4096)
 print(data.decode('utf-8', errors='replace'))
 ser.close()
@@ -306,14 +307,14 @@ ser.close()
 | 长命令截断 | 终端缓冲限制 | 脚本隔离法 |
 | login 反复掉线 | getty 竞争/噪声 | 见 references/serial-debug-diagnostics.md |
 | 有回显但命令不执行 | 未登录 / 业务槽 getty 丢失 | 见 references/serial-debug-diagnostics.md；业务槽常见"只剩回显、命令不执行"且该 boot 无网 ⇒ 只能重启恢复 |
-| 反复 login 失败后彻底无 shell | 顶到 init respawn 限额 | **别反复重试**：提示符出现时一次登录（root + 空密码直接进）；实测 ~8 次失败后本 boot 再无 getty ⇒ 重启设备 |
+| 反复 login 失败后彻底无 shell | 顶到 init respawn 限额 | **别反复重试**：提示符出现时一次登录（root + 按固件版本密码，先试空密码）；实测 ~8 次失败后本 boot 再无 getty ⇒ 重启设备 |
 
 ---
 
 ## ⛔ 烧录门禁与高频坑（2026-09-11 沉淀，烧前必读）
 
 > 完整账（含代价与分区类坑）：qwiki `<项目A>_wifi/20260911-flash-partition-pitfalls-avoidance.md`
-> 同步说明：本 skill 与 `~/.pi/agent/skills/serial-tftp/` 同源双份，改动须**双写**（2026-09-12 由反思 cron 补齐门禁段与 scripts 硬化）
+> 同步说明：pi 目标副本由 `bash install.sh --target pi` 安装到 `~/.pi/agent/skills/serial-tftp/`；改动本仓后重跑安装脚本即同步（不再有「双写」约定——先前提到的同源目录在本机并不存在）
 
 **烧前 8 条门禁（缺一不烧）**
 1. 产物新鲜：`system_b.img`/`NOR_ALL`/FIT 时间戳 ≥ `.ko` 时间戳
@@ -341,7 +342,7 @@ ser.close()
 
 ```bash
 # 串口敲回车判断模式
-# Linux: root + 空密码 → reboot → 持续回车 12s
+# Linux: root + 密码（先试空密码，失败再 root/root）→ reboot → 持续回车 12s
 # U-Boot:
 setenv ipaddr <DEV_IP>
 setenv netmask 255.255.254.0

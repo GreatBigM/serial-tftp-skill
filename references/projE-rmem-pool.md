@@ -21,7 +21,7 @@ ISP 驱动参数，控制 ISP 内部 rmem 缓冲用量。在 init.sh 中通过 i
 
 切换方式：
 ```sh
-insmod tx-isp-PRJ009.ko isp_memopt=0x5 ...
+insmod tx-isp-<项目E>.ko isp_memopt=0x5 ...
 ```
 
 ## Diagnostics

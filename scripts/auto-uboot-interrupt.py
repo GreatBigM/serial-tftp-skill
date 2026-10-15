@@ -186,7 +186,7 @@ def interrupt_uboot(ser, timeout=20):
     print("[*] Sending reboot + interrupting U-Boot...")
     ser.write(b"reboot\r")
     # 提示符探测化：不硬编码 <项目>#，匹配两类 U-Boot 提示符形态
-    #   1. "<名字>#"（PRJ009# / U-Boot# / 任意名#）
+    #   1. "<名字>#"（<项目E># / U-Boot# / 任意名#）
     #   2. "=>"（通用 U-Boot 提示符）
     PROMPT_RE = re.compile(r"(#\s*$|=>\s*$)", re.MULTILINE)
     end = time.time() + timeout
@@ -260,7 +260,7 @@ def set_network(ser, ipaddr, netmask, gateway, serverip):
     if "#" not in out:
         print("[-] Network settings may have failed (no U-Boot prompt)")
         return False
-    # 70mai fix (flash-gate, 2026-09-11): 回读核对——防"只设 ipaddr/serverip、
+    # 现场 fix (flash-gate, 2026-09-11): 回读核对——防"只设 ipaddr/serverip、
     # gatewayip 残留旧值"导致 serverip 被当 off-link 走假网关（实测 T T T 超时）
     time.sleep(0.3)
     ser.reset_input_buffer()
@@ -289,7 +289,7 @@ def uboot_cmd(ser, cmd, timeout=10.0, settle=0.3):
     字符**，不是回车 0x0D。U-Boot 的 hush 只在收到 CR 时才把整行交给解析器，
     于是那串文本一直躺在控制台输入缓冲里等下一个真 CR，被一起结清，现场表现：
 
-        PRJ009# ping <IP-1>\rping <IP-1>\rping <IP-2>
+        <项目E># ping <IP-1>\rping <IP-1>\rping <IP-2>
 
     即「预检从未真的 ping 过（静默失效）」+「残渣被下一条命令吃掉」。
 
@@ -366,7 +366,7 @@ def ping_verify(ser, serverip, retries=2):
 def run_mai_tftp(ser, timeout=420, script="auto_update_tftp.txt"):
     """执行 mai_tftp 烧录并监控输出。
 
-    70mai fix (flash-false-positive, 2026-09-11): 原实现发裸 `mai_tftp`（依赖 CPSPR
+    现场 fix (flash-false-positive, 2026-09-11): 原实现发裸 `mai_tftp`（依赖 CPSPR
     解码 IP，CPSPR 空则兜底 <IP> → fetch 永远失败）且成功判据含 "reset"/"Linux
     version"（设备 autoboot 回退也满足）→ **假阳性 "flash OK"**（09-09 半天无效烧录）。
     现改为：①显式脚本名；②失败标记优先判负；③必须见到 TFTP 装载与写入完成标记才算成功。
@@ -502,7 +502,7 @@ def main():
     ipaddr = args.ipaddr or get("ipaddr") or ""
     serverip = args.serverip or get("serverip") or ""
     netmask = args.netmask or get("netmask") or "255.255.254.0"
-    # 70mai fix (2026-09-11): gateway 默认不再取 serverip（曾致 off-link 路由假网关）；
+    # 现场 fix (2026-09-11): gateway 默认不再取 serverip（曾致 off-link 路由假网关）；
     # 本仓不放内网默认值：跨网段烧录给 --gateway（或 TFTP_GATEWAY），首次给出的会缓存
     gateway = args.gateway or get("gateway") or os.environ.get("TFTP_GATEWAY", "")
     if not gateway:

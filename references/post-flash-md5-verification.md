@@ -1,6 +1,6 @@
 # 烧录后 MD5 三方对齐验证（铁律）
 
-> 2026-07-17 实战教训：烧录脚本报"监控超时"但串口看到 login:，甜妞误判烧录成功。
+> 2026-07-17 实战教训：烧录脚本报"监控超时"但串口看到 login:，操作者误判烧录成功。
 > 实际设备跑的是旧固件（c_mi_ipc 时间戳 Jul 3，uptime 16.5h 未重启）。
 > 烧录根本没生效 -- 要么 erase/write 未完成，要么设备从旧固件启动。
 
@@ -118,7 +118,7 @@ md5sum out/image_<project>/.tmp/bin/c_mi_ipc
 
 ## 子 agent 参数错误的处理
 
-delegate 子 agent 用了错误参数（如波特率 1500000 而非 921600）时，进程会持续运行不报错（pyserial 能 write 但 read 返回乱码/空）。甜妞不能被动等待子 agent 超时返回，应主动检查：
+delegate 子 agent 用了错误参数（如波特率 1500000 而非 921600）时，进程会持续运行不报错（pyserial 能 write 但 read 返回乱码/空）。执行者不能被动等待子 agent 超时返回，应主动检查：
 - `fuser /dev/ttyUSB0` 确认串口被占用
 - `ps aux | grep auto-uboot` 确认脚本在跑
 - 如果脚本运行超过 3 分钟仍无进展，主动 kill 并用正确参数重派

@@ -1,7 +1,7 @@
 # <项目A> 串口参数
 
 - 波特率: 115200
-- 登录: 用户 `root`，密码**分固件版本**：旧版空密码（直接回车），新版 `root`/`root`。先用空密码尝试，失败后用 `root`/`root` 重试
+- 登录: 用户 `root`，密码**按固件版本**：旧版为空（直接回车），新版 `root`/`root`——先用空密码，失败再试 `root`/`root`
 - busybox 缺: `head`, `which`, `strings`, `getprop`, `uname`, `nohup`
 - adbd: **当前固件无 adbd**。`adbd &` 命令不存在。ADB 连接尝试会超时（10s）。串口是唯一可靠通道。
 - 内核 3.10: AF_ALG 无 `ALG_SET_OP`/`ALG_SET_IV`，write=encrypt, IV prepend to data
@@ -31,7 +31,3 @@ s.write(b"killall -9 apphilogcat mai_log_service miio_client c_mi_ipc 2>/dev/nul
 ifconfig eth0 <IP-1> netmask 255.255.240.0 up
 ```
 不需要 `down` 先。不要同时运行 `udhcpc`。
-
-## 相关 skill
-
-- `<项目A>-stress-test` — 重启压力测试脚本和指南

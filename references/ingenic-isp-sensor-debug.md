@@ -41,7 +41,7 @@ The old Ingenic SDK ISP driver (drv:H20260608a) tolerated the wrong value. The s
 
 ### ISP Driver Sync Pitfalls
 
-When syncing ISP driver source from Ingenic SDK (`arch/mips/xburst/lib/isp/PRJ009/`) to project's external module (`drivers/t32_t33/isp/tx-isp-PRJ009/`):
+When syncing ISP driver source from Ingenic SDK (`arch/mips/xburst/lib/isp/<项目E>/`) to project's external module (`drivers/t32_t33/isp/tx-isp-<项目E>/`):
 
 | File | Critical? | Notes |
 |------|-----------|-------|

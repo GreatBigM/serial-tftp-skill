@@ -14,7 +14,7 @@ rtsp_demo 调用 `IMP_ISP_AddSensor()` 后，传感器驱动 `os08f10_attr_check
 
 ### 内核驱动层
 
-`kernel/linux/drivers/t32_t33/sensors/os08f10/PRJ009/os08f10.c` 的 `os08f10_attr_check()` 函数中，MCLK switch 的 `default:` 分支只打印错误信息但不初始化 `sclka` 和 `sensor->mclk`，后续代码用未初始化指针调用 `os08f10_clk_set()` → kernel Oops。
+`kernel/linux/drivers/t32_t33/sensors/os08f10/<项目E>/os08f10.c` 的 `os08f10_attr_check()` 函数中，MCLK switch 的 `default:` 分支只打印错误信息但不初始化 `sclka` 和 `sensor->mclk`，后续代码用未初始化指针调用 `os08f10_clk_set()` → kernel Oops。
 
 **修复：**
 ```c
@@ -44,9 +44,9 @@ if (IS_ERR_OR_NULL(sclka)) {
 
 ## 验证方法
 
-1. 编译 `sensor_os08f10_PRJ009.ko`
-2. 推送到设备：`adb push sensor_os08f10_PRJ009.ko /tmp/`
-3. 加载：`rmmod sensor_os08f10_PRJ009; insmod /tmp/sensor_os08f10_PRJ009.ko`
+1. 编译 `sensor_os08f10_<项目E>.ko`
+2. 推送到设备：`adb push sensor_os08f10_<项目E>.ko /tmp/`
+3. 加载：`rmmod sensor_os08f10_<项目E>; insmod /tmp/sensor_os08f10_<项目E>.ko`
 4. 运行 rtsp_demo，检查 dmesg：
    - ❌ 旧版: `Have no this MCLK Source!!!` + kernel Oops
    - ✅ 新版: `set sensor mclk(0) gpio` + `fallback to MCLK0`（无 Oops）
