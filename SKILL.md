@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.11
+version: 2.0.12
 category: devops
 metadata:
   agent:
@@ -244,6 +244,9 @@ reset
 
 盲打发 3 次 CR（`\r`，0x0d）观察回显，**不假设设备状态**：
 
+> ⚠️ **探活有副作用：CR 会命中 U-Boot 的 `Hit any key` 而打断 autoboot**。设备恰在 2s 倒计时窗口内时，探活的 CR 会把本该正常引导的设备**停在 U-Boot**（2026-10-16 一天内两次实踩；恢复只能断电冷启动）。
+> 纪律：先想清设备可能处在哪个阶段——**刚上电 / 刚 reboot 的 0–5s 内不要连发 CR**，先读串口日志等 `login:` 或提示符自然出现；误打断后 `reboot` 或断电冷启动复位，**不要继续在 U-Boot 里盲发命令**。
+
 | 回显 | 当前模式 | 下一步 |
 |------|---------|--------|
 | `U-Boot>` / `Hit any key` | U-Boot | 烧录/打断启动（见上文） |
@@ -265,6 +268,8 @@ reset
 ### 盲打登录
 
 用户 `root`，密码**按固件版本**：旧版为空（直接回车），新版 `root`/`root`——**先用空密码，失败再试 `root`/`root`**。设备日志可能持续淹没提示符，登录前先 drain。
+
+> ⚠️ **淹没提示符的常常是业务 app 的 console 输出，不走 printk**（`dmesg` 里查不到、也不是内核日志）⇒ 提示符迟迟不出现时**别判「shell/getty 挂了」**：先 drain，再发唯一标记看回显确认双向，并按日志节奏挑窗口登录。2026-10-16 实测：业务 console 洪流把 `login:` 淹掉，被自动脚本误判为「无 getty」；真凶是洪流不是 getty（同类结局还有「反复 login 失败顶到 init respawn 限额」——见故障速查）。
 
 ```python
 import serial, time
@@ -308,6 +313,8 @@ ser.close()
 | login 反复掉线 | getty 竞争/噪声 | 见 references/serial-debug-diagnostics.md |
 | 有回显但命令不执行 | 未登录 / 业务槽 getty 丢失 | 见 references/serial-debug-diagnostics.md；业务槽常见"只剩回显、命令不执行"且该 boot 无网 ⇒ 只能重启恢复 |
 | 反复 login 失败后彻底无 shell | 顶到 init respawn 限额 | **别反复重试**：提示符出现时一次登录（root + 按固件版本密码，先试空密码）；实测 ~8 次失败后本 boot 再无 getty ⇒ 重启设备 |
+| 探活后设备停在 U-Boot（本该正常引导） | 发 CR 命中 autoboot 的 `Hit any key` | 断电冷启动复位；刚上电/刚 reboot 的 0–5s 内不连发 CR |
+| 命令发出无回显 / 结果明显不对（实验空跑） | 上一条**前台命令还没返回提示符**，新命令被输入缓冲吞掉或粘成参数 | 等提示符回显再发下一条；长命令一律走后台 + 结果文件（`sh x.sh > /tmp/_r 2>&1 &`） |
 
 ---
 

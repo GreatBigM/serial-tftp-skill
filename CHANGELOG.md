@@ -2,6 +2,15 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 2.0.12 (2026-10-17)
+
+### Added
+- **探活 CR 有副作用**（SKILL.md 铁律 + `references/command-execution-patterns.md` §零）：设备处在 U-Boot autoboot 倒计时窗口（刚上电 / 刚 reboot 的 0–5s）时，探活的 CR 会命中 `Hit any key`，把本该正常引导的设备**停在 U-Boot** ⇒ 该窗口内只读不回写；误打断只能断电冷启动复位（2026-10-16 一天内两次实踩）
+- **业务 console 洪流 ≠ getty 丢失**（SKILL.md 盲打登录）：淹掉 `login:` 的常是业务 app 的控制台输出（不走 printk，`dmesg` 查不到）⇒ 提示符久不出现时先 drain + 发唯一标记自证双向，别判「shell/getty 挂了」
+- 故障速查表补两行：① 探活后停在 U-Boot ② 上一条前台命令未返回提示符时发下一条会被吞（实验静默空跑）
+
+- 版本 2.0.11 → 2.0.12
+
 ## 2.0.11 (2026-10-15)
 
 ### Fixed

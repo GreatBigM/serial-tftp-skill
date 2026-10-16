@@ -38,6 +38,8 @@ else:                       mode = 'NOISE'
 | SHELL | **直接发命令，不要再发 root** |
 | NOISE | 等 5s 重试，或看门狗复位 |
 
+> ⚠️ **探活 CR 不是零成本**：设备若正处在 U-Boot autoboot 倒计时（刚上电/刚 reboot 的 0–5s），CR 会命中 `Hit any key` 把它停在 U-Boot（2026-10-16 两次实踩 ⇒ 只能断电冷启动）。**刚上电/刚 reboot 时先只读不回写**，等日志里出现 `login:` 或提示符再动手。
+
 ### SHELL 误判陷阱（2026-07-27 <项目A> 实踩）
 
 症状：发 `root\r` 回显 `-sh: root: not found`，反复"登录失败"。
