@@ -2,6 +2,13 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 2.0.13 (2026-10-18)
+
+### Fixed
+- **统一入口调用方式写错**：`scripts/serial-tftp` 是 `#!/usr/bin/env bash`，SKILL.md 却教 `python3 <skill_dir>/scripts/serial-tftp ...` ⇒ 照抄必报错（2026-10-18 实证误用一次）。9 处入口示例全部改为 `bash <skill_dir>/scripts/serial-tftp ...`；同节 `*.py` 原语脚本仍用 `python3`（二者不要混）
+
+- 版本 2.0.12 → 2.0.13
+
 ## 2.0.12 (2026-10-17)
 
 ### Added

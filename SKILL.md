@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.12
+version: 2.0.13
 category: devops
 metadata:
   agent:
@@ -37,15 +37,15 @@ AI:  执行烧录流程（按本文件流程铁律）→ 回报结果
 
 ```bash
 # 统一入口 wrapper（skill 目录内，agent 可选调用）
-python3 <skill_dir>/scripts/serial-tftp flash            # 一键烧录（主命令）
-python3 <skill_dir>/scripts/serial-tftp flash --at-uboot # 设备已在 U-Boot
-python3 <skill_dir>/scripts/serial-tftp setup            # 交互式参数设定
-python3 <skill_dir>/scripts/serial-tftp config show      # 查看配置缓存
-python3 <skill_dir>/scripts/serial-tftp cmd 'ifconfig eth0'  # 串口发单条命令
-python3 <skill_dir>/scripts/serial-tftp capture          # 启动日志采集
-python3 <skill_dir>/scripts/serial-tftp reboot-capture   # 循环重启采集
-python3 <skill_dir>/scripts/serial-tftp stress --count 20    # 重启压力测试
-python3 <skill_dir>/scripts/serial-tftp shell            # 交互式 U-Boot shell
+bash <skill_dir>/scripts/serial-tftp flash            # 一键烧录（主命令）
+bash <skill_dir>/scripts/serial-tftp flash --at-uboot # 设备已在 U-Boot
+bash <skill_dir>/scripts/serial-tftp setup            # 交互式参数设定
+bash <skill_dir>/scripts/serial-tftp config show      # 查看配置缓存
+bash <skill_dir>/scripts/serial-tftp cmd 'ifconfig eth0'  # 串口发单条命令
+bash <skill_dir>/scripts/serial-tftp capture          # 启动日志采集
+bash <skill_dir>/scripts/serial-tftp reboot-capture   # 循环重启采集
+bash <skill_dir>/scripts/serial-tftp stress --count 20    # 重启压力测试
+bash <skill_dir>/scripts/serial-tftp shell            # 交互式 U-Boot shell
 
 # 或直接调用原语脚本（等价）
 python3 <skill_dir>/scripts/auto-uboot-interrupt.py setup              # 交互式向导
