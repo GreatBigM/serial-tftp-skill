@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.0.13
+version: 2.1.2
 category: devops
 metadata:
   agent:
@@ -174,6 +174,14 @@ U-Boot 收不到 CR ⇒ 命令不执行、文本堆在输入缓冲里直到下�
 | 超时 30s | ⚠️ 等 60-90s 人工确认 |
 
 **烧录后：** 串口 `ifconfig eth0` 查新 IP → `adb kill-server && adb connect <新IP>:5555`
+（部分镜像 eth0 走 DHCP，烧完自己就有 IP ⇒ 不必先串口设 IP，`adb connect` 直接可用；adb 拿到后后续采集都改走 adb，串口只留作兜底）
+
+**烧后自证清单（按改动类型取用，别只报「烧录成功」）**
+1. `cat /proc/uptime` < 120s ⇒ 确实是新启动，不是旧进程。
+2. 本次改动逐项读回（sysctl/参数/版本号），与源码/脚本里写的**逐条对照**；只读回不回对照 = 没验证。
+3. `/proc/version` 编译时间戳 + 新增模块参数存在（防烧到旧镜像）。
+
+**抽测 ≠ 回归判据**：烧后跑一次 iperf3/功能抽测只证明「网络栈/链路可用」。业务态未调优的单次吞吐（常见 20–40Mbps 级塌陷）是设备常态，**不能拿来判回归**；回归结论必须在同 boot 内做 A/B/A' 或与同工况基线比。把抽测数字写进报告时要标明「不作判据」。
 
 ---
 
@@ -269,6 +277,8 @@ reset
 
 用户 `root`，密码**按固件版本**：旧版为空（直接回车），新版 `root`/`root`——**先用空密码，失败再试 `root`/`root`**。设备日志可能持续淹没提示符，登录前先 drain。
 
+**先读提示符，再决定要不要登录**：有些镜像（supervisor 起 shell 的那种）开机**自动登录为 root**，串口上根本等不到 `login:`。此时若照抄登录序列盲发 `root`，它会被当命令执行、回显 `-sh: root: not found`，而脚本还误判「没有密码提示 = 登录失败」。判据：读到 `[root@<host>:]<dir>$` 一类提示符 ⇒ 已登录，直接发命令；连发 3 次 CR 仍只有提示符、没有 `login:` ⇒ 同上。`root: not found` 是本坑的识别特征，见到它不要重试登录。
+
 > ⚠️ **淹没提示符的常常是业务 app 的 console 输出，不走 printk**（`dmesg` 里查不到、也不是内核日志）⇒ 提示符迟迟不出现时**别判「shell/getty 挂了」**：先 drain，再发唯一标记看回显确认双向，并按日志节奏挑窗口登录。2026-10-16 实测：业务 console 洪流把 `login:` 淹掉，被自动脚本误判为「无 getty」；真凶是洪流不是 getty（同类结局还有「反复 login 失败顶到 init respawn 限额」——见故障速查）。
 
 ```python
@@ -315,6 +325,27 @@ ser.close()
 | 反复 login 失败后彻底无 shell | 顶到 init respawn 限额 | **别反复重试**：提示符出现时一次登录（root + 按固件版本密码，先试空密码）；实测 ~8 次失败后本 boot 再无 getty ⇒ 重启设备 |
 | 探活后设备停在 U-Boot（本该正常引导） | 发 CR 命中 autoboot 的 `Hit any key` | 断电冷启动复位；刚上电/刚 reboot 的 0–5s 内不连发 CR |
 | 命令发出无回显 / 结果明显不对（实验空跑） | 上一条**前台命令还没返回提示符**，新命令被输入缓冲吞掉或粘成参数 | 等提示符回显再发下一条；长命令一律走后台 + 结果文件（`sh x.sh > /tmp/_r 2>&1 &`） |
+| 「串口彻底没输出」疑似硬件坏 | 长命令在**业务日志洪流**下丢字符、引号没闭合 ⇒ shell 停在 `>`（PS2）续行，后续所有输入被当续行吞掉 | **先发 Ctrl+C** 回提示符再重试；Ctrl+C 能立刻恢复 ⇒ 不是线/口/FT232 问题，别换线换口（10-28 白耗 ~30min） |
+| `-sh: root: not found` / `-sh: <用户名>: not found` | 设备**已自动登录**（无 `login:` 阶段），盲发的用户名被当命令执行 | 别再「重试登录」；看到 shell 提示符就直接发目标命令 |
+| 脚本报 `ModuleNotFoundError: No module named 'serial'` | 跑脚本的解释器没装 pyserial（默认 `python3` 可能是 Hermes 自带解释器） | 用 `/usr/bin/python3` 跑（系统 site-packages 有 pyserial）；本技能的串口脚本一律显式用它 |
+
+---
+
+## 接手现场（会话交接 / 烧录可能正在跑）
+
+接手别人的（或上个会话留下的）烧录/测量现场时，**先查在跑进程，再决定动不动串口**：
+
+```bash
+pgrep -af "auto-uboot-interrupt|serial-tftp|mai_tftp|flash"   # 有没有在跑的烧录
+fuser -v /dev/ttyUSB*                                          # 串口有没有被占
+ls -lt <change>/data/**/flash_*.log | head                     # 日志最后写入时间
+```
+
+- **有在跑的烧录 ⇒ 不要开串口、不要 kill、不要重烧**：烧录脚本自己会 `tee` 日志，直接 `tail` 日志判进度即可。并发打开串口 = `multiple access on port`，kill 掉可能正好卡在 `sf erase` 之后、写之前 —— 那才是真变砖。
+- **日志停在 `sf erase 0x0 0xexxxx` 不是卡死**：16MB 擦除 + 写入 + 重启实测 ~100–150s 无新输出；判据是进程还在（`pgrep`）+ 日志文件 mtime 在动。
+- **判完成看脚本自己的成功标记**（`Kernel booting` / 烧录流程完成 / login prompt），不要凭「`Bytes transferred` 出现」就宣布成功 —— 那只说明 TFTP 下载完了。
+- 进程已消失但日志没写完成标记 ⇒ 才是失败，按 `references/troubleshooting.md` 恢复（`--at-uboot` / 断电冷启动）。
+- 接手后第一件事把现场结论落盘（烧的是哪个 md5、当前 IP、adb 通不通），否则下一个会话又得重猜。
 
 ---
 
@@ -323,7 +354,7 @@ ser.close()
 > 完整账（含代价与分区类坑）：qwiki `<项目A>_wifi/20260911-flash-partition-pitfalls-avoidance.md`
 > 同步说明：pi 目标副本由 `bash install.sh --target pi` 安装到 `~/.pi/agent/skills/serial-tftp/`；改动本仓后重跑安装脚本即同步（不再有「双写」约定——先前提到的同源目录在本机并不存在）
 
-**烧前 8 条门禁（缺一不烧）**
+**烧前 10 条门禁（缺一不烧）**
 1. 产物新鲜：`system_b.img`/`NOR_ALL`/FIT 时间戳 ≥ `.ko` 时间戳
 2. `.ko` 一致性用 **.text/.data 比对**（md5 因 strip 必不同）
 3. `auto_update_tftp.txt` 必须是**全量版**：`tftpboot <proj>_NOR_ALL.bin` + `sf erase 0x0 0xF70000`（范围与 `partition_layout/partitions.conf` 一致）
@@ -333,8 +364,11 @@ ser.close()
 7. U-Boot env **四件套**并 `printenv` 核对：
    `setenv ipaddr <IP-2>; setenv netmask 255.255.255.0; setenv gatewayip <IP-3>; setenv serverip <IP-4>; mai_tftp`
 8. 烧后反证：U-Boot 打印的 kernel/system 地址大小与布局一致；启动后 `/proc/version` 时间戳 + 新参数存在（防"烧了旧镜像"）
+9. **eth0 物理链路**：TFTP 只能走网口，设备 Linux 侧 `carrier=0`（没插线 / 交换机端口没起来）时 U-Boot 也拿不到链路 ⇒ 烧录必然空等。判据是 U-Boot 日志出现 `Link UP` + `Link is with 100M Speed`，**不是在 Linux 侧 ping**（双网的设备可能只有 wlan0 通）。
+10. **烧录长度按产物 `stat` 动态生成 + 事后验真**（2026-10-23 实证）：HM6801 一次沿用旧常量 `0x541200`（实际 `0x542200`）少写 `0xE00` → FIT `RSA` 校验 −13 后 U-Boot **自动 recover 回 A 分区**，串口依旧打印 `Written: OK` ⇒ 白烧一轮还误判「新 ko 没生效」。判据链：`Written: OK` + FIT `RSA ... OK` **不等于生效**，必须启动后核 **`srcversion`**（`cat /sys/module/<mod>/srcversion` 或 `strings <ko>`）**+ `.text` 逐字节/`.ko` md5** 与产物一致，并确认设备跑的是 B 分区（`/proc/cmdline` 分区参数）。
 
 **高频坑**
+- **`rmmod` 必崩 ⇒ 驱动 A/B 只能烧镜像**（2026-10-23 实证，HM6801 AIC8800）：`rmmod aic8800_fdrv` 崩在 `aicwf_rx_deinit+0xec → kthread_stop → __put_task_struct → exit_creds`（BadVA=0），模块卡 `Unloading`、`reboot` 无效，但 **`echo b > /proc/sysrq-trigger` 免断电强制复位**。⇒ 换 `.ko` 做 A/B 的路线在带 RX 线程的驱动上先验一次 `rmmod` 再规划，否则整轮实验作废
 - 只设 `ipaddr/serverip` → env 残留 `gatewayip=<IP-5>` → `sending through gateway <IP-5>` + `T T T`（serverip 与设备不同网段）
 - `mai_tftp` 无参走 CPSPR 解码 IP；CPSPR 空 → 兜底 <IP-6> → fetch 失败却像成功（**假阳性**）；脚本已改显式 `mai_tftp auto_update_tftp.txt` + 失败标记判负（`Retry count exceeded`/`Abort`/`No ethernet found`/`T T T`）+ 成功须见 `bytes written`
 - **CPSPR 触发可用性随内核变化**（判据 = 内核是否带 `AF_SIGNATURE` 保护，与成对 skill `adb-tftp` 同口径）：无保护内核解锁→写→锁定→reboot 仍正常引导（不进 TFTP）；带保护内核（2026-09-18 修复）实测 `Mod: CPSPR = 0x97060909` 活过 reboot ⇒ **换内核/换镜像必重测**。稳妥主路径仍 = 断电冷启动 + 上电瞬间连打 CR 抢 U-Boot。依据：qwiki `projects/<项目A>_wifi/20260918-cpspr-af-signature-515-regression.md`

@@ -2,6 +2,19 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 2.1.2 (2026-10-28)
+
+### Added
+- **故障速查新增「串口彻底没输出」≠ 硬件坏**：长命令在业务日志洪流下丢字符、引号未闭合 ⇒ shell 停在 `>`（PS2）续行，后续所有输入被当续行吞掉。**先发 Ctrl+C** 回提示符再重试；能立刻恢复说明不是线/口/FT232 问题（10-28 误判硬件、白耗 ~30min 换线换口）。
+
+## 2.1.1 (2026-10-24)
+
+### Added
+- **烧前门禁第 10 条「烧录长度动态生成 + 事后验真」**：HM6801 一次沿用旧常量 `0x541200`（实际 `0x542200`）少写 `0xE00` → FIT RSA 校验 −13 后 U-Boot **自动 recover 回 A 分区**，串口仍打印 `Written: OK`，白烧一轮还误判「新 ko 没生效」。判据：`Written: OK` + FIT OK ≠ 生效，必须核 `srcversion` + `.ko` md5/`.text` 逐字节 + `/proc/cmdline` 分区。
+- **高频坑「`rmmod` 必崩 ⇒ 驱动 A/B 只能烧镜像」**：`rmmod aic8800_fdrv` 崩在 `aicwf_rx_deinit+0xec → kthread_stop → __put_task_struct`，模块卡 `Unloading`、`reboot` 无效，`echo b > /proc/sysrq-trigger` 可免断电复位。带 RX 线程的驱动先验 `rmmod` 再规划换 ko 的 A/B 路线。
+
+- 版本 2.1.0 → 2.1.1
+
 ## 2.0.13 (2026-10-18)
 
 ### Fixed
