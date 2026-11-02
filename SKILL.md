@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.1.2
+version: 2.1.3
 category: devops
 metadata:
   agent:
@@ -354,7 +354,7 @@ ls -lt <change>/data/**/flash_*.log | head                     # 日志最后写
 > 完整账（含代价与分区类坑）：qwiki `<项目A>_wifi/20260911-flash-partition-pitfalls-avoidance.md`
 > 同步说明：pi 目标副本由 `bash install.sh --target pi` 安装到 `~/.pi/agent/skills/serial-tftp/`；改动本仓后重跑安装脚本即同步（不再有「双写」约定——先前提到的同源目录在本机并不存在）
 
-**烧前 10 条门禁（缺一不烧）**
+**烧前 11 条门禁（缺一不烧）**
 1. 产物新鲜：`system_b.img`/`NOR_ALL`/FIT 时间戳 ≥ `.ko` 时间戳
 2. `.ko` 一致性用 **.text/.data 比对**（md5 因 strip 必不同）
 3. `auto_update_tftp.txt` 必须是**全量版**：`tftpboot <proj>_NOR_ALL.bin` + `sf erase 0x0 0xF70000`（范围与 `partition_layout/partitions.conf` 一致）
@@ -366,13 +366,14 @@ ls -lt <change>/data/**/flash_*.log | head                     # 日志最后写
 8. 烧后反证：U-Boot 打印的 kernel/system 地址大小与布局一致；启动后 `/proc/version` 时间戳 + 新参数存在（防"烧了旧镜像"）
 9. **eth0 物理链路**：TFTP 只能走网口，设备 Linux 侧 `carrier=0`（没插线 / 交换机端口没起来）时 U-Boot 也拿不到链路 ⇒ 烧录必然空等。判据是 U-Boot 日志出现 `Link UP` + `Link is with 100M Speed`，**不是在 Linux 侧 ping**（双网的设备可能只有 wlan0 通）。
 10. **烧录长度按产物 `stat` 动态生成 + 事后验真**（2026-10-23 实证）：HM6801 一次沿用旧常量 `0x541200`（实际 `0x542200`）少写 `0xE00` → FIT `RSA` 校验 −13 后 U-Boot **自动 recover 回 A 分区**，串口依旧打印 `Written: OK` ⇒ 白烧一轮还误判「新 ko 没生效」。判据链：`Written: OK` + FIT `RSA ... OK` **不等于生效**，必须启动后核 **`srcversion`**（`cat /sys/module/<mod>/srcversion` 或 `strings <ko>`）**+ `.text` 逐字节/`.ko` md5** 与产物一致，并确认设备跑的是 B 分区（`/proc/cmdline` 分区参数）。
+11. **擦写脚本必须硬门控**（2026-11-02 实证，代价 = 设备变砖）：任何 `sf erase`/`sf write` 都要整体包在「tftp 已返回 `Bytes transferred = <全量>`」**之后**，任一步失败立即 `exit`。只门控 `reset` 等于没门控——tftp 报 `No ethernet found` 后脚本照样整片擦写，把从未加载的 RAM 垃圾写进 NOR `0x0–0xef0000`，U-Boot 签名头被毁、串口全哑、CPSPR/TFTP/adb/sysrq 全断，只能 SD 卡启动恢复（见 `references/bricked-nor-recovery.md`）。**优先用仓库现成脚本**（`mai_tftp auto_update_tftp.txt` 逐行执行、天然门控），不要自写裸 `tftpboot` + `sf` 序列。
 
 **高频坑**
 - **`rmmod` 必崩 ⇒ 驱动 A/B 只能烧镜像**（2026-10-23 实证，HM6801 AIC8800）：`rmmod aic8800_fdrv` 崩在 `aicwf_rx_deinit+0xec → kthread_stop → __put_task_struct → exit_creds`（BadVA=0），模块卡 `Unloading`、`reboot` 无效，但 **`echo b > /proc/sysrq-trigger` 免断电强制复位**。⇒ 换 `.ko` 做 A/B 的路线在带 RX 线程的驱动上先验一次 `rmmod` 再规划，否则整轮实验作废
 - 只设 `ipaddr/serverip` → env 残留 `gatewayip=<IP-5>` → `sending through gateway <IP-5>` + `T T T`（serverip 与设备不同网段）
 - `mai_tftp` 无参走 CPSPR 解码 IP；CPSPR 空 → 兜底 <IP-6> → fetch 失败却像成功（**假阳性**）；脚本已改显式 `mai_tftp auto_update_tftp.txt` + 失败标记判负（`Retry count exceeded`/`Abort`/`No ethernet found`/`T T T`）+ 成功须见 `bytes written`
 - **CPSPR 触发可用性随内核变化**（判据 = 内核是否带 `AF_SIGNATURE` 保护，与成对 skill `adb-tftp` 同口径）：无保护内核解锁→写→锁定→reboot 仍正常引导（不进 TFTP）；带保护内核（2026-09-18 修复）实测 `Mod: CPSPR = 0x97060909` 活过 reboot ⇒ **换内核/换镜像必重测**。稳妥主路径仍 = 断电冷启动 + 上电瞬间连打 CR 抢 U-Boot。依据：qwiki `projects/<项目A>_wifi/20260918-cpspr-af-signature-515-regression.md`
-- GMAC 只由 `mai_tftp` 初始化：先单独 `ping`/`tftpboot` 会 `No ethernet found`
+- GMAC 只由 `mai_tftp` 初始化：先单独 `ping`/`tftpboot` 会 `No ethernet found` ⇒ **派生铁律：不许绕过 `mai_tftp` 自写 `tftpboot`+`sf` 组合**（2026-11-02 烧砖直接原因；坑早写在同一条里仍被绕过 ⇒ 安全设计要长在脚本里，不靠人记）
 - 温重启挂死（负载态）会截断"reboot → 抢 U-Boot"路径 → 必须断电冷启动
 - **非 shell 状态禁止盲发命令**：login 提示符下命令会被当用户名（一串 `Login incorrect`），先发 CR 判模式
 - `pkill -f <name>` 会匹配自身命令行导致自杀；用 `pkill -f "[a]utoboot"` 或 `setsid`

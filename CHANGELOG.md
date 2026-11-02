@@ -2,6 +2,12 @@
 
 本文件记录版本历史。版本号定义在 SKILL.md frontmatter 的 `version` 字段（单一真相源）。
 
+## 2.1.3 (2026-11-02)
+
+### Added
+- **烧前门禁新增第 11 条「擦写脚本必须硬门控」**（代价 = 设备变砖）：`sf erase`/`sf write` 必须整体包在「tftp 返回 `Bytes transferred = <全量>`」之后，任一步失败即 `exit`；只门控 `reset` 等于没门控。2026-11-02 HM6801 自写 `flash10b.py` 裸 `tftpboot` 报 `No ethernet found`（GMAC 只由 `mai_tftp` 初始化）后照样整片擦写，把 RAM 垃圾写进 NOR `0x0–0xef0000`，U-Boot 签名头被毁、串口全哑，只能 SD 卡启动恢复。
+- **高频坑「GMAC 只由 mai_tftp 初始化」补派生铁律**：不许绕过 `mai_tftp` 自写 `tftpboot`+`sf` 组合——坑早已写在同一条里仍被绕过 ⇒ 安全设计要长在脚本里，不靠人记。
+
 ## 2.1.2 (2026-10-28)
 
 ### Added
