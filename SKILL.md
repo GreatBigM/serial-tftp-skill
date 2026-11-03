@@ -1,7 +1,7 @@
 ---
 name: serial-tftp
 description: 嵌入式串口交互 + TFTP 刷机一站式：串口连接/盲打登录/命令执行/故障排查 + 环境预检/模式判断/配网烧录/完成验证。
-version: 2.1.3
+version: 2.1.4
 category: devops
 metadata:
   agent:
@@ -323,6 +323,8 @@ ser.close()
 | login 反复掉线 | getty 竞争/噪声 | 见 references/serial-debug-diagnostics.md |
 | 有回显但命令不执行 | 未登录 / 业务槽 getty 丢失 | 见 references/serial-debug-diagnostics.md；业务槽常见"只剩回显、命令不执行"且该 boot 无网 ⇒ 只能重启恢复 |
 | 反复 login 失败后彻底无 shell | 顶到 init respawn 限额 | **别反复重试**：提示符出现时一次登录（root + 按固件版本密码，先试空密码）；实测 ~8 次失败后本 boot 再无 getty ⇒ 重启设备 |
+| 本 boot 再也没 shell，只能断电 | 在 `login:` 提示符出现**之前**连发一串命令/用户名（子代理高频），触发 CRASH_COUNT_LIMIT 崩溃计数 → getty 被杀 | 登录前**只发一个 CR**，看到 `login:` 再发用户名，一次一条等回显；已踩到就只能等重启/物理断电（11-03 实证：一次连发 7 条后 getty 被杀、该 boot 无网络恢复路径） |
+| 命令发出后串口毫无反应（连提示符也不回） | `cat $(ls ...)` / `for f in $(...)` 前景命令的 glob 匹配为空 ⇒ `cat` 退化为读 stdin，把串口 shell 独占 | 先判空再 cat（`ls ... >/dev/null 2>&1 && cat ...`），或写脚本隔离；已挂死先发 Ctrl+C（多数可恢复），仍挂则重启 shell/设备 |
 | 探活后设备停在 U-Boot（本该正常引导） | 发 CR 命中 autoboot 的 `Hit any key` | 断电冷启动复位；刚上电/刚 reboot 的 0–5s 内不连发 CR |
 | 命令发出无回显 / 结果明显不对（实验空跑） | 上一条**前台命令还没返回提示符**，新命令被输入缓冲吞掉或粘成参数 | 等提示符回显再发下一条；长命令一律走后台 + 结果文件（`sh x.sh > /tmp/_r 2>&1 &`） |
 | 「串口彻底没输出」疑似硬件坏 | 长命令在**业务日志洪流**下丢字符、引号没闭合 ⇒ shell 停在 `>`（PS2）续行，后续所有输入被当续行吞掉 | **先发 Ctrl+C** 回提示符再重试；Ctrl+C 能立刻恢复 ⇒ 不是线/口/FT232 问题，别换线换口（10-28 白耗 ~30min） |
