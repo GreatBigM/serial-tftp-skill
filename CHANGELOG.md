@@ -4,15 +4,18 @@
 
 ## 2.1.4 (2026-11-03)
 
+### Changed
+- 脱敏：项目代号统一换占位符 `<项目A>`（发布闸门要求）
+
 ### Added
-- **故障速查两行新条目**（都来自 11-03 HM6801 现场）：
+- **故障速查两行新条目**（都来自 11-03 <项目A> 现场）：
   1. 在 `login:` 提示符出现**之前**连发多条命令/用户名 → 触发 CRASH_COUNT_LIMIT 崩溃计数、getty 被杀，该 boot 再也没 shell、无网络恢复路径 ⇒ 只能物理断电。规则：登录前只发一个 CR，看到提示符再发用户名，一次一条等回显。
   2. `cat $(ls ...)` 类前景命令 glob 匹配为空 ⇒ `cat` 退化为读 stdin 独占串口 shell，表现为"命令发了毫无反应"。规则：先判空再 cat，或写脚本隔离。
 
 ## 2.1.3 (2026-11-02)
 
 ### Added
-- **烧前门禁新增第 11 条「擦写脚本必须硬门控」**（代价 = 设备变砖）：`sf erase`/`sf write` 必须整体包在「tftp 返回 `Bytes transferred = <全量>`」之后，任一步失败即 `exit`；只门控 `reset` 等于没门控。2026-11-02 HM6801 自写 `flash10b.py` 裸 `tftpboot` 报 `No ethernet found`（GMAC 只由 `mai_tftp` 初始化）后照样整片擦写，把 RAM 垃圾写进 NOR `0x0–0xef0000`，U-Boot 签名头被毁、串口全哑，只能 SD 卡启动恢复。
+- **烧前门禁新增第 11 条「擦写脚本必须硬门控」**（代价 = 设备变砖）：`sf erase`/`sf write` 必须整体包在「tftp 返回 `Bytes transferred = <全量>`」之后，任一步失败即 `exit`；只门控 `reset` 等于没门控。2026-11-02 <项目A> 自写 `flash10b.py` 裸 `tftpboot` 报 `No ethernet found`（GMAC 只由 `mai_tftp` 初始化）后照样整片擦写，把 RAM 垃圾写进 NOR `0x0–0xef0000`，U-Boot 签名头被毁、串口全哑，只能 SD 卡启动恢复。
 - **高频坑「GMAC 只由 mai_tftp 初始化」补派生铁律**：不许绕过 `mai_tftp` 自写 `tftpboot`+`sf` 组合——坑早已写在同一条里仍被绕过 ⇒ 安全设计要长在脚本里，不靠人记。
 
 ## 2.1.2 (2026-10-28)
@@ -23,7 +26,7 @@
 ## 2.1.1 (2026-10-24)
 
 ### Added
-- **烧前门禁第 10 条「烧录长度动态生成 + 事后验真」**：HM6801 一次沿用旧常量 `0x541200`（实际 `0x542200`）少写 `0xE00` → FIT RSA 校验 −13 后 U-Boot **自动 recover 回 A 分区**，串口仍打印 `Written: OK`，白烧一轮还误判「新 ko 没生效」。判据：`Written: OK` + FIT OK ≠ 生效，必须核 `srcversion` + `.ko` md5/`.text` 逐字节 + `/proc/cmdline` 分区。
+- **烧前门禁第 10 条「烧录长度动态生成 + 事后验真」**：<项目A> 一次沿用旧常量 `0x541200`（实际 `0x542200`）少写 `0xE00` → FIT RSA 校验 −13 后 U-Boot **自动 recover 回 A 分区**，串口仍打印 `Written: OK`，白烧一轮还误判「新 ko 没生效」。判据：`Written: OK` + FIT OK ≠ 生效，必须核 `srcversion` + `.ko` md5/`.text` 逐字节 + `/proc/cmdline` 分区。
 - **高频坑「`rmmod` 必崩 ⇒ 驱动 A/B 只能烧镜像」**：`rmmod aic8800_fdrv` 崩在 `aicwf_rx_deinit+0xec → kthread_stop → __put_task_struct`，模块卡 `Unloading`、`reboot` 无效，`echo b > /proc/sysrq-trigger` 可免断电复位。带 RX 线程的驱动先验 `rmmod` 再规划换 ko 的 A/B 路线。
 
 - 版本 2.1.0 → 2.1.1
